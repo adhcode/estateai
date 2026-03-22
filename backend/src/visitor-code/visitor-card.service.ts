@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
@@ -14,6 +14,27 @@ export class VisitorCardService {
     private readonly outputDir = path.join(process.cwd(), 'uploads', 'visitor-cards');
 
     constructor() {
+        // Register fonts if available
+        try {
+            // Try to register DejaVu fonts (available in Alpine with ttf-dejavu package)
+            const fontPaths = [
+                '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+                '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+            ];
+
+            for (const fontPath of fontPaths) {
+                if (fs.existsSync(fontPath)) {
+                    registerFont(fontPath, { family: 'DejaVu Sans' });
+                    this.logger.log(`Registered font: ${fontPath}`);
+                    break;
+                }
+            }
+        } catch (error) {
+            this.logger.warn(`Could not register custom fonts: ${error.message}`);
+        }
+
         // Ensure output directory exists
         if (!fs.existsSync(this.outputDir)) {
             fs.mkdirSync(this.outputDir, { recursive: true });
@@ -73,7 +94,7 @@ export class VisitorCardService {
 
             // "VISITOR" text below QR (with manual letter spacing)
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 56px sans-serif';
+            ctx.font = 'bold 56px "DejaVu Sans", Arial, sans-serif';
             ctx.textAlign = 'center';
             const visitorText = 'V I S I T O R'; // Manual spacing
             ctx.fillText(visitorText, width / 2, qrY + qrSize + 70);
@@ -83,18 +104,18 @@ export class VisitorCardService {
 
             // Visitor Name - Large and prominent
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 42px sans-serif';
+            ctx.font = 'bold 42px "DejaVu Sans", Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(visitorCodeData.visitorName.toUpperCase(), width / 2, bottomY);
 
             // Access Code with label
             const codeY = bottomY + 70;
             ctx.fillStyle = '#64748b';
-            ctx.font = '20px sans-serif';
+            ctx.font = '20px "DejaVu Sans", Arial, sans-serif';
             ctx.fillText('ACCESS CODE', width / 2, codeY);
 
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 52px monospace';
+            ctx.font = 'bold 52px "DejaVu Sans", monospace';
             ctx.fillText(visitorCodeData.code, width / 2, codeY + 55);
 
             // Details section with clean layout
@@ -108,10 +129,10 @@ export class VisitorCardService {
             const unitInfo = `${visitorCodeData.occupant?.unit?.block || ''} ${visitorCodeData.occupant?.unit?.flat || ''}`.trim();
             if (unitInfo) {
                 ctx.fillStyle = '#64748b';
-                ctx.font = '22px sans-serif';
+                ctx.font = '22px "DejaVu Sans", Arial, sans-serif';
                 ctx.fillText('Unit:', labelX, detailsY);
                 ctx.fillStyle = '#1e293b';
-                ctx.font = 'bold 24px sans-serif';
+                ctx.font = 'bold 24px "DejaVu Sans", Arial, sans-serif';
                 ctx.fillText(unitInfo, valueX, detailsY);
             }
 
@@ -119,19 +140,19 @@ export class VisitorCardService {
             const hostName = visitorCodeData.occupant?.primaryOccupant?.name ||
                 visitorCodeData.occupant?.name || 'Resident';
             ctx.fillStyle = '#64748b';
-            ctx.font = '22px sans-serif';
+            ctx.font = '22px "DejaVu Sans", Arial, sans-serif';
             ctx.fillText('Host:', labelX, detailsY + lineHeight);
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = 'bold 24px "DejaVu Sans", Arial, sans-serif';
             ctx.fillText(hostName, valueX, detailsY + lineHeight);
 
             // Valid Until
             const expiryDate = new Date(visitorCodeData.expiresAt);
             ctx.fillStyle = '#64748b';
-            ctx.font = '22px sans-serif';
+            ctx.font = '22px "DejaVu Sans", Arial, sans-serif';
             ctx.fillText('Valid Until:', labelX, detailsY + lineHeight * 2);
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = 'bold 24px "DejaVu Sans", Arial, sans-serif';
             const expiryText = expiryDate.toLocaleString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -154,7 +175,7 @@ export class VisitorCardService {
 
             // Footer text
             ctx.fillStyle = '#64748b';
-            ctx.font = '18px sans-serif';
+            ctx.font = '18px "DejaVu Sans", Arial, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('', width / 2, footerY);
 
@@ -169,7 +190,7 @@ export class VisitorCardService {
 
             // Estate name in logo - FIXED to show properly
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 14px sans-serif';
+            ctx.font = 'bold 14px "DejaVu Sans", Arial, sans-serif';
             const estateName = visitorCodeData.occupant?.estate?.name || '';
             ctx.fillText(estateName.toUpperCase(), width / 2, logoY + 5);
 
