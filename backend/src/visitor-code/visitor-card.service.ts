@@ -14,36 +14,27 @@ export class VisitorCardService {
     private readonly outputDir = path.join(process.cwd(), 'uploads', 'visitor-cards');
 
     constructor() {
-        // Register fonts if available
+        // Register bundled fonts
         try {
-            // List available fonts for debugging
-            if (fs.existsSync('/usr/share/fonts')) {
-                this.logger.log('Font directories available');
+            const fontDir = path.join(process.cwd(), 'assets', 'fonts');
+            const regularFont = path.join(fontDir, 'DejaVuSans.ttf');
+            const boldFont = path.join(fontDir, 'DejaVuSans-Bold.ttf');
+
+            if (fs.existsSync(regularFont)) {
+                registerFont(regularFont, { family: 'DejaVu Sans', weight: 'normal' });
+                this.logger.log(`✅ Registered regular font: ${regularFont}`);
+            } else {
+                this.logger.warn(`⚠️ Regular font not found at: ${regularFont}`);
             }
 
-            // Try to register DejaVu fonts (available in Debian with fonts-dejavu-core package)
-            const fontPaths = [
-                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-                '/usr/share/fonts/dejavu/DejaVuSans.ttf',
-                '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
-            ];
-
-            let fontRegistered = false;
-            for (const fontPath of fontPaths) {
-                if (fs.existsSync(fontPath)) {
-                    registerFont(fontPath, { family: 'DejaVu Sans' });
-                    this.logger.log(`✅ Registered font: ${fontPath}`);
-                    fontRegistered = true;
-                    break;
-                }
-            }
-
-            if (!fontRegistered) {
-                this.logger.warn('⚠️ No DejaVu fonts found, will use system default');
+            if (fs.existsSync(boldFont)) {
+                registerFont(boldFont, { family: 'DejaVu Sans', weight: 'bold' });
+                this.logger.log(`✅ Registered bold font: ${boldFont}`);
+            } else {
+                this.logger.warn(`⚠️ Bold font not found at: ${boldFont}`);
             }
         } catch (error) {
-            this.logger.error(`❌ Could not register custom fonts: ${error.message}`);
+            this.logger.error(`❌ Could not register fonts: ${error.message}`);
         }
 
         // Ensure output directory exists

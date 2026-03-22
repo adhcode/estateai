@@ -29,6 +29,9 @@ RUN npm install --legacy-peer-deps && \
 # Copy rest of backend
 COPY backend/ ./
 
+# Ensure fonts are copied
+RUN ls -la assets/fonts/ || echo "No fonts directory found"
+
 # Generate Prisma client
 RUN npx prisma generate
 
