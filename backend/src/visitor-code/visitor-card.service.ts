@@ -50,6 +50,8 @@ export class VisitorCardService {
      */
     async generateVisitorCard(visitorCodeData: any): Promise<string> {
         try {
+            this.logger.log(`🎨 Starting card generation for visitor: ${visitorCodeData.visitorName}`);
+
             // Card dimensions - Badge style (portrait)
             const width = 800;
             const height = 1100;
@@ -94,12 +96,16 @@ export class VisitorCardService {
             const qrX = (width - qrSize) / 2;
             ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
+            this.logger.debug('QR code drawn successfully');
+
             // "VISITOR" text below QR (with manual letter spacing)
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 56px "DejaVu Sans", Arial, sans-serif';
             ctx.textAlign = 'center';
             const visitorText = 'V I S I T O R'; // Manual spacing
             ctx.fillText(visitorText, width / 2, qrY + qrSize + 70);
+
+            this.logger.debug('VISITOR text drawn');
 
             // Bottom white section starts here
             const bottomY = topHeight + 40;
@@ -110,6 +116,8 @@ export class VisitorCardService {
             ctx.textAlign = 'center';
             ctx.fillText(visitorCodeData.visitorName.toUpperCase(), width / 2, bottomY);
 
+            this.logger.debug(`Visitor name drawn: ${visitorCodeData.visitorName}`);
+
             // Access Code with label
             const codeY = bottomY + 70;
             ctx.fillStyle = '#64748b';
@@ -119,6 +127,8 @@ export class VisitorCardService {
             ctx.fillStyle = '#1e293b';
             ctx.font = 'bold 52px "DejaVu Sans", monospace';
             ctx.fillText(visitorCodeData.code, width / 2, codeY + 55);
+
+            this.logger.debug(`Access code drawn: ${visitorCodeData.code}`);
 
             // Details section with clean layout
             const detailsY = codeY + 120;
@@ -136,6 +146,7 @@ export class VisitorCardService {
                 ctx.fillStyle = '#1e293b';
                 ctx.font = 'bold 24px "DejaVu Sans", Arial, sans-serif';
                 ctx.fillText(unitInfo, valueX, detailsY);
+                this.logger.debug(`Unit info drawn: ${unitInfo}`);
             }
 
             // Host
@@ -147,6 +158,8 @@ export class VisitorCardService {
             ctx.fillStyle = '#1e293b';
             ctx.font = 'bold 24px "DejaVu Sans", Arial, sans-serif';
             ctx.fillText(hostName, valueX, detailsY + lineHeight);
+
+            this.logger.debug(`Host name drawn: ${hostName}`);
 
             // Valid Until
             const expiryDate = new Date(visitorCodeData.expiresAt);
@@ -163,6 +176,8 @@ export class VisitorCardService {
                 minute: '2-digit'
             });
             ctx.fillText(expiryText, valueX, detailsY + lineHeight * 2);
+
+            this.logger.debug(`Expiry date drawn: ${expiryText}`);
 
             // Footer section
             const footerY = height - 120;
@@ -196,13 +211,15 @@ export class VisitorCardService {
             const estateName = visitorCodeData.occupant?.estate?.name || '';
             ctx.fillText(estateName.toUpperCase(), width / 2, logoY + 5);
 
+            this.logger.debug(`Estate name drawn: ${estateName}`);
+
             // Save to file
             const filename = `visitor-${visitorCodeData.code}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);
             const buffer = canvas.toBuffer('image/png');
             fs.writeFileSync(filepath, buffer);
 
-            this.logger.log(`Generated visitor card: ${filename}`);
+            this.logger.log(`✅ Generated visitor card: ${filename} (${buffer.length} bytes)`);
             return filepath;
         } catch (error) {
             this.logger.error(`Failed to generate visitor card: ${error.message}`);
