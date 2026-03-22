@@ -13,6 +13,16 @@ RUN apt-get update && apt-get install -y \
     fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
+# Create fontconfig directory and config
+RUN mkdir -p /etc/fonts && \
+    echo '<?xml version="1.0"?>\n\
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n\
+<fontconfig>\n\
+  <dir>/usr/share/fonts</dir>\n\
+  <dir>/app/assets/fonts</dir>\n\
+  <cachedir>/tmp/fontconfig</cachedir>\n\
+</fontconfig>' > /etc/fonts/fonts.conf
+
 # Update font cache
 RUN fc-cache -f -v
 
@@ -22,15 +32,18 @@ WORKDIR /app
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
 
-# Install dependencies and rebuild canvas
+# Install dependencies and rebuild canvas with proper bindings
 RUN npm install --legacy-peer-deps && \
-    npm rebuild canvas
+    npm rebuild canvas --build-from-source
 
-# Copy rest of backend
+# Copy rest of backend (including bundled fonts)
 COPY backend/ ./
 
-# Ensure fonts are copied
-RUN ls -la assets/fonts/ || echo "No fonts directory found"
+# Rebuild font cache with bundled fonts
+RUN fc-cache -f -v
+
+# Verify fonts are present
+RUN ls -la assets/fonts/ && echo "Fonts copied successfully" || echo "Warning: No fonts directory found"
 
 # Generate Prisma client
 RUN npx prisma generate
