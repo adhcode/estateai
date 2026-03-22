@@ -1,5 +1,20 @@
 FROM node:22-alpine
 
+# Install canvas dependencies
+RUN apk add --no-cache \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev \
+    pangomm-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    build-base \
+    g++ \
+    make \
+    python3
+
 WORKDIR /app
 
 # Copy backend files
