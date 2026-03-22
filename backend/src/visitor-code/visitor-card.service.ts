@@ -40,15 +40,9 @@ export class VisitorCardService {
     private readonly outputDir = path.join(process.cwd(), 'uploads', 'visitor-cards');
 
     constructor() {
-        // Log environment for debugging
-        this.logger.log(`🔍 Current working directory: ${process.cwd()}`);
-        this.logger.log(`🔍 FONTCONFIG_PATH: ${process.env.FONTCONFIG_PATH || 'not set'}`);
-        this.logger.log(`🔍 FONTCONFIG_FILE: ${process.env.FONTCONFIG_FILE || 'not set'}`);
-
         // Ensure output directory exists
         if (!fs.existsSync(this.outputDir)) {
             fs.mkdirSync(this.outputDir, { recursive: true });
-            this.logger.log(`Created visitor cards directory: ${this.outputDir}`);
         }
     }
 

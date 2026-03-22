@@ -1,6 +1,6 @@
 FROM node:22-slim
 
-# Install canvas dependencies and fonts for Debian
+# Install canvas dependencies and basic fonts
 RUN apt-get update && apt-get install -y \
     build-essential \
     libcairo2-dev \
@@ -9,28 +9,12 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libgif-dev \
     librsvg2-dev \
-    fonts-dejavu-core \
-    fonts-noto \
     fontconfig \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
-# Create fontconfig directory and config
-RUN mkdir -p /etc/fonts /var/cache/fontconfig && \
-    echo '<?xml version="1.0"?>\n\
-<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n\
-<fontconfig>\n\
-  <dir>/usr/share/fonts</dir>\n\
-  <dir>/app/assets/fonts</dir>\n\
-  <cachedir>/var/cache/fontconfig</cachedir>\n\
-</fontconfig>' > /etc/fonts/fonts.conf && \
-    chmod -R 777 /var/cache/fontconfig
-
-# Set fontconfig environment variables
-ENV FONTCONFIG_PATH=/etc/fonts
-ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
-
 # Update font cache
-RUN fc-cache -f -v
+RUN fc-cache -fv
 
 WORKDIR /app
 
@@ -42,15 +26,11 @@ COPY backend/prisma ./prisma/
 RUN npm install --legacy-peer-deps && \
     npm rebuild canvas --build-from-source
 
-# Copy rest of backend (including bundled fonts and startup script)
+# Copy rest of backend
 COPY backend/ ./
 
-# Rebuild font cache with bundled fonts
-RUN fc-cache -f -v
-
-# Verify fonts are present and list available fonts
-RUN ls -la assets/fonts/ && echo "Fonts copied successfully" || echo "Warning: No fonts directory found"
-RUN fc-list | grep -i dejavu || echo "Warning: DejaVu fonts not found in font cache"
+# Rebuild font cache
+RUN fc-cache -fv
 
 # Generate Prisma client
 RUN npx prisma generate
