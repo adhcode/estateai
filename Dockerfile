@@ -15,15 +15,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create fontconfig directory and config
-RUN mkdir -p /etc/fonts /tmp/fontconfig && \
+RUN mkdir -p /etc/fonts /var/cache/fontconfig && \
     echo '<?xml version="1.0"?>\n\
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n\
 <fontconfig>\n\
   <dir>/usr/share/fonts</dir>\n\
   <dir>/app/assets/fonts</dir>\n\
-  <cachedir>/tmp/fontconfig</cachedir>\n\
+  <cachedir>/var/cache/fontconfig</cachedir>\n\
 </fontconfig>' > /etc/fonts/fonts.conf && \
-    chmod -R 777 /tmp/fontconfig
+    chmod -R 777 /var/cache/fontconfig
 
 # Set fontconfig environment variables
 ENV FONTCONFIG_PATH=/etc/fonts
