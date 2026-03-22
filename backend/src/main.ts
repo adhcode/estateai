@@ -12,6 +12,13 @@ import { ResponseTransformInterceptor } from './common/interceptors/response-tra
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
+  // Set fontconfig environment variables for Canvas font rendering
+  process.env.FONTCONFIG_PATH = process.env.FONTCONFIG_PATH || '/etc/fonts';
+  process.env.FONTCONFIG_FILE = process.env.FONTCONFIG_FILE || '/etc/fonts/fonts.conf';
+
+  logger.log(`🔤 Fontconfig path: ${process.env.FONTCONFIG_PATH}`);
+  logger.log(`🔤 Fontconfig file: ${process.env.FONTCONFIG_FILE}`);
+
   try {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['log', 'error', 'warn', 'debug', 'verbose'],
