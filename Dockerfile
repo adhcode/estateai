@@ -1,27 +1,20 @@
-FROM node:22-alpine
+FROM node:22-slim
 
-# Install canvas dependencies and fonts
-RUN apk add --no-cache \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    giflib-dev \
-    pixman-dev \
-    pangomm-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    build-base \
-    g++ \
-    make \
-    python3 \
-    font-noto \
-    font-noto-cjk \
-    font-noto-emoji \
-    ttf-dejavu \
-    fontconfig
+# Install canvas dependencies and fonts for Debian
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    fonts-dejavu-core \
+    fonts-noto \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/*
 
 # Update font cache
-RUN fc-cache -f
+RUN fc-cache -f -v
 
 WORKDIR /app
 
