@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-# Install canvas dependencies
+# Install canvas dependencies and fonts
 RUN apk add --no-cache \
     cairo-dev \
     jpeg-dev \
@@ -13,7 +13,15 @@ RUN apk add --no-cache \
     build-base \
     g++ \
     make \
-    python3
+    python3 \
+    font-noto \
+    font-noto-cjk \
+    font-noto-emoji \
+    ttf-dejavu \
+    fontconfig
+
+# Update font cache
+RUN fc-cache -f
 
 WORKDIR /app
 
