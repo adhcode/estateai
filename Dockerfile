@@ -22,8 +22,9 @@ WORKDIR /app
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
+# Install dependencies and rebuild canvas
+RUN npm install --legacy-peer-deps && \
+    npm rebuild canvas
 
 # Copy rest of backend
 COPY backend/ ./

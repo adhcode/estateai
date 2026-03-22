@@ -16,23 +16,34 @@ export class VisitorCardService {
     constructor() {
         // Register fonts if available
         try {
-            // Try to register DejaVu fonts (available in Alpine with ttf-dejavu package)
+            // List available fonts for debugging
+            if (fs.existsSync('/usr/share/fonts')) {
+                this.logger.log('Font directories available');
+            }
+
+            // Try to register DejaVu fonts (available in Debian with fonts-dejavu-core package)
             const fontPaths = [
-                '/usr/share/fonts/dejavu/DejaVuSans.ttf',
-                '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
                 '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
                 '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+                '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
             ];
 
+            let fontRegistered = false;
             for (const fontPath of fontPaths) {
                 if (fs.existsSync(fontPath)) {
                     registerFont(fontPath, { family: 'DejaVu Sans' });
-                    this.logger.log(`Registered font: ${fontPath}`);
+                    this.logger.log(`✅ Registered font: ${fontPath}`);
+                    fontRegistered = true;
                     break;
                 }
             }
+
+            if (!fontRegistered) {
+                this.logger.warn('⚠️ No DejaVu fonts found, will use system default');
+            }
         } catch (error) {
-            this.logger.warn(`Could not register custom fonts: ${error.message}`);
+            this.logger.error(`❌ Could not register custom fonts: ${error.message}`);
         }
 
         // Ensure output directory exists
