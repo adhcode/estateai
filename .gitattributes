@@ -1,0 +1,91 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Web files
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+
+# Config files
+*.conf text eol=lf
+*.config text eol=lf
+*.ini text eol=lf
+*.env text eol=lf
+*.env.* text eol=lf
+
+# Documentation
+*.txt text eol=lf
+*.rtf text eol=lf
+*.pdf binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.rar binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# Audio/Video
+*.mp3 binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.wav binary
+
+# Database
+*.db binary
+*.sqlite binary
+
+# Logs
+*.log text eol=lf
+
+# Lock files
+package-lock.json binary
+yarn.lock text eol=lf
+
+# Prisma
+*.prisma text eol=lf
+
+# Docker
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell
+*.ps1 text eol=lf
+
+# GitHub
+.gitignore text eol=lf
+.gitattributes text eol=lf

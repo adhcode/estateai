@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Estate {
+  id          String        @id @default(cuid())
+  name        String
+  address     String
+  phoneNumber String?
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  units        Unit[]
+  occupants    Occupant[]
+  visitorCodes VisitorCode[]
+  users        User[]
+
+  @@map("estates")
+}
+
+model Unit {
+  id        String     @id @default(cuid())
+  estateId  String
+  block     String     // e.g., "Block A"
+  flat      String     // e.g., "Flat 4"
+  floor     Int?       // Optional floor number
+  bedrooms  Int?       // Number of bedrooms
+  isOccupied Boolean   @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  estate    Estate     @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  occupants Occupant[]
+
+  @@unique([estateId, block, flat]) // Ensure uniqueness per estate
+  @@map("units")
+}
+
+model Occupant {
+  id                String       @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?      // Optional for some occupants
+  estateId          String
+  unitId            String
+  type              OccupantType @default(RESIDENT)
+  primaryOccupantId String?      // Required for HOUSEHOLD_MEMBER, null for RESIDENT
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Relations
+  estate           Estate        @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  unit             Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  primaryOccupant  Occupant?     @relation("PrimaryOccupant", fields: [primaryOccupantId], references: [id])
+  householdMembers Occupant[]    @relation("PrimaryOccupant")
+  visitorCodes     VisitorCode[]
+
+  // Constraints
+  @@index([estateId, unitId]) // Index for queries by estate and unit
+  @@map("occupants")
+}
+
+enum OccupantType {
+  RESIDENT        // Primary resident/tenant
+  HOUSEHOLD_MEMBER // Family member, dependent, etc.
+}
+
+model VisitorCode {
+  id           String            @id @default(cuid())
+  code         String            @unique // 6-8 digit code
+  visitorName  String
+  visitorPhone String?
+  purpose      String?           // Purpose of visit
+  estateId     String
+  occupantId   String?           // Optional - for occupant-generated codes
+  status       VisitorCodeStatus @default(ACTIVE)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  departedAt   DateTime?         // When visitor left
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // Relations
+  estate   Estate    @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  occupant Occupant? @relation(fields: [occupantId], references: [id], onDelete: Cascade)
+
+  @@map("visitor_codes")
+}
+
+enum VisitorCodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed password
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  estate   Estate? @relation(fields: [estateId], references: [id])
+  estateId String?
+
+  // Session management
+  sessions UserSession[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ESTATE_ADMIN
+  SECURITY
+}
