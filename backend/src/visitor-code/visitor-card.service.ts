@@ -1,19 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
 
-// Initialize fontconfig BEFORE Canvas is used anywhere
+// Initialize fontconfig and register system fonts BEFORE Canvas is used
 try {
     process.env.FONTCONFIG_PATH = process.env.FONTCONFIG_PATH || '/etc/fonts';
     process.env.FONTCONFIG_FILE = process.env.FONTCONFIG_FILE || '/etc/fonts/fonts.conf';
 
     // Rebuild font cache at module load time
     execSync('fc-cache -f', { stdio: 'ignore' });
+
+    // Register system-installed DejaVu Sans fonts explicitly
+    const systemFontPaths = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+    ];
+
+    for (const fontPath of systemFontPaths) {
+        if (fs.existsSync(fontPath)) {
+            const weight = fontPath.includes('Bold') ? 'bold' : 'normal';
+            registerFont(fontPath, { family: 'DejaVu Sans', weight });
+            console.log(`✅ Registered system font: ${fontPath}`);
+        }
+    }
 } catch (error) {
-    console.error('Warning: Could not initialize fontconfig:', error.message);
+    console.error('Warning: Could not initialize fonts:', error.message);
 }
 
 /**
