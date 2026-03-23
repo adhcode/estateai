@@ -108,7 +108,7 @@ export default function EstateAdminsPage() {
     }
 
     return (
-        <div className="space-y-6" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -328,8 +328,8 @@ export default function EstateAdminsPage() {
                                             </button>
                                         </div>
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${admin.isActive
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-red-100 text-red-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
                                             }`}>
                                             {admin.isActive ? 'Active' : 'Inactive'}
                                         </span>

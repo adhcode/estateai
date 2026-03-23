@@ -115,7 +115,7 @@ export default function VisitorHistoryPage() {
     }
 
     return (
-        <div className="space-y-6" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

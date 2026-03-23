@@ -207,7 +207,7 @@ export default function EstatesPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-64" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+            <div className="flex flex-col items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
                 <p className="text-gray-600">Loading estates...</p>
             </div>
@@ -215,7 +215,7 @@ export default function EstatesPage() {
     }
 
     return (
-        <div className="space-y-6" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+        <div className="space-y-6">
             {/* Success Message */}
             {success && (
                 <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">

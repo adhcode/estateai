@@ -1,13 +1,6 @@
 import ClientProviders from '@/components/ClientProviders'
 import type { Metadata } from 'next'
-import { Bricolage_Grotesque } from 'next/font/google'
 import './globals.css'
-
-const bricolage = Bricolage_Grotesque({
-    subsets: ['latin'],
-    display: 'swap',
-    variable: '--font-bricolage'
-})
 
 export const metadata: Metadata = {
     title: "Kira — Your Community Assistant",
@@ -21,7 +14,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={bricolage.className}>
+            <body>
                 <ClientProviders>
                     {children}
                 </ClientProviders>

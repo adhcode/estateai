@@ -288,8 +288,8 @@ export default function SettingsPage() {
                     </p>
                 </div>
                 <span className={`px-3 py-1 text-xs font-medium rounded-full ${settings.whatsapp.isConnected
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-800'
                     }`}>
                     {settings.whatsapp.isConnected ? 'Connected' : 'Disconnected'}
                 </span>
@@ -367,7 +367,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+        <div className="space-y-6">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
@@ -392,8 +392,8 @@ export default function SettingsPage() {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={`w-full flex items-center space-x-3 px-3 py-2 text-left rounded-lg transition-colors ${activeTab === tab.id
-                                                ? 'bg-gray-100 text-gray-900'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            ? 'bg-gray-100 text-gray-900'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                             }`}
                                     >
                                         <Icon className="h-4 w-4" />

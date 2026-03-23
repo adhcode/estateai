@@ -90,7 +90,7 @@ export default function UsersPage() {
     }
 
     return (
-        <div className="space-y-6" style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+        <div className="space-y-6">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">All Users</h1>
@@ -152,8 +152,8 @@ export default function UsersPage() {
                         key={role}
                         onClick={() => setFilter(role as any)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === role
-                                ? 'bg-black text-white'
-                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                            ? 'bg-black text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                             }`}
                     >
                         {role === 'ALL' ? 'All Users' : formatRole(role)}
@@ -214,8 +214,8 @@ export default function UsersPage() {
                                             Joined {new Date(user.createdAt).toLocaleDateString()}
                                         </span>
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.isActive
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-red-100 text-red-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
                                             }`}>
                                             {user.isActive ? 'Active' : 'Inactive'}
                                         </span>
