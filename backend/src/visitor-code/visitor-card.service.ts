@@ -23,18 +23,46 @@ function registerFontIfExists(
 // Register fonts once at module load
 try {
     // Try bundled fonts first
-    registerFontIfExists(
-        '/app/assets/fonts/DejaVuSans.ttf',
-        'App Sans',
-        'normal',
-    );
-    registerFontIfExists(
-        '/app/assets/fonts/DejaVuSans-Bold.ttf',
-        'App Sans',
-        'bold',
-    );
+    const bundledFonts = [
+        { path: '/app/assets/fonts/DejaVuSans.ttf', weight: 'normal' as FontWeight },
+        { path: '/app/assets/fonts/DejaVuSans-Bold.ttf', weight: 'bold' as FontWeight },
+    ];
+
+    let registeredCount = 0;
+    for (const font of bundledFonts) {
+        if (fs.existsSync(font.path)) {
+            registerFont(font.path, { family: 'App Sans', weight: font.weight });
+            console.log(`✅ Registered bundled font: App Sans (${font.weight}) -> ${font.path}`);
+            registeredCount++;
+        } else {
+            console.warn(`⚠️ Bundled font not found: ${font.path}`);
+        }
+    }
+
+    // If no bundled fonts found, try system fonts as fallback
+    if (registeredCount === 0) {
+        console.warn('⚠️ No bundled fonts found, trying system fonts...');
+        const systemFonts = [
+            { path: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', weight: 'normal' as FontWeight },
+            { path: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', weight: 'bold' as FontWeight },
+        ];
+
+        for (const font of systemFonts) {
+            if (fs.existsSync(font.path)) {
+                registerFont(font.path, { family: 'App Sans', weight: font.weight });
+                console.log(`✅ Registered system font: App Sans (${font.weight}) -> ${font.path}`);
+                registeredCount++;
+            }
+        }
+    }
+
+    if (registeredCount === 0) {
+        console.error('❌ NO FONTS REGISTERED! Text will not render properly.');
+    } else {
+        console.log(`✅ Total fonts registered: ${registeredCount}`);
+    }
 } catch (error: any) {
-    console.error('Warning: Could not initialize fonts:', error.message);
+    console.error('❌ Font registration failed:', error.message);
 }
 
 @Injectable()
