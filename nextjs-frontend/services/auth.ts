@@ -19,11 +19,19 @@ export interface LoginResponse {
   access_token: string
 }
 
+export interface WrappedLoginResponse {
+  success: boolean
+  data: LoginResponse
+  timestamp: string
+  path: string
+  method: string
+}
+
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await api.post('/auth/login', { email, password })
+    const response = await api.post<WrappedLoginResponse>('/auth/login', { email, password })
     // Backend wraps response in { success, data } format
-    return response.data.data || response.data
+    return response.data.data
   },
 
   async logout() {
