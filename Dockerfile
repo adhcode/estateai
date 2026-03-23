@@ -29,7 +29,6 @@ COPY backend/ ./
 RUN npx prisma generate
 RUN npm run build
 
-# Build-time verification
 RUN dpkg -l | grep dejavu || true
 RUN ls -l /usr/share/fonts/truetype/dejavu || true
 RUN file /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf || true
