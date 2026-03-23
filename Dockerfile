@@ -1,6 +1,6 @@
 FROM node:22-bookworm
 
-# Install canvas dependencies and basic fonts
+# Install canvas dependencies and fonts
 RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     libpango1.0-dev \
@@ -8,8 +8,24 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libgif-dev \
     librsvg2-dev \
+    fontconfig \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
+
+# Create proper fontconfig setup
+RUN mkdir -p /etc/fonts && \
+    echo '<?xml version="1.0"?>' > /etc/fonts/fonts.conf && \
+    echo '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">' >> /etc/fonts/fonts.conf && \
+    echo '<fontconfig>' >> /etc/fonts/fonts.conf && \
+    echo '  <dir>/usr/share/fonts</dir>' >> /etc/fonts/fonts.conf && \
+    echo '  <cachedir>/var/cache/fontconfig</cachedir>' >> /etc/fonts/fonts.conf && \
+    echo '</fontconfig>' >> /etc/fonts/fonts.conf && \
+    mkdir -p /var/cache/fontconfig && \
+    chmod -R 777 /var/cache/fontconfig && \
+    fc-cache -fv
+
+ENV FONTCONFIG_PATH=/etc/fonts
+ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
 
 WORKDIR /app
 
