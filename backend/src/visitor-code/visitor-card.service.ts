@@ -5,7 +5,6 @@ import * as path from 'path';
 import * as QRCode from 'qrcode';
 
 type FontWeight = 'normal' | 'bold';
-
 const FONT_FAMILY = 'App Sans';
 
 function tryRegisterFont(
@@ -21,7 +20,6 @@ function tryRegisterFont(
     try {
         const stats = fs.statSync(fontPath);
         console.log(`📁 Found font: ${fontPath} (${stats.size} bytes)`);
-
         registerFont(fontPath, { family, weight });
         console.log(`✅ Registered font: ${family} (${weight}) -> ${fontPath}`);
         return true;
@@ -32,7 +30,6 @@ function tryRegisterFont(
     }
 }
 
-// Register system fonts once at module load
 (() => {
     let registeredCount = 0;
 
@@ -74,18 +71,15 @@ export class VisitorCardService {
 
     async generateVisitorCard(visitorCodeData: any): Promise<string> {
         try {
-            this.logger.log(
-                `🎨 Starting card generation for visitor: ${visitorCodeData.visitorName}`,
-            );
+            this.logger.log(`🎨 Starting card generation for visitor: ${visitorCodeData.visitorName}`);
 
             const width = 800;
             const height = 1100;
             const canvas = createCanvas(width, height);
             const ctx = canvas.getContext('2d');
-            const cornerRadius = 0;
 
             ctx.fillStyle = '#ffffff';
-            this.roundRect(ctx, 0, 0, width, height, cornerRadius);
+            this.roundRect(ctx, 0, 0, width, height, 0);
             ctx.fill();
 
             const topHeight = 520;
@@ -93,15 +87,14 @@ export class VisitorCardService {
             gradient.addColorStop(0, '#1e293b');
             gradient.addColorStop(1, '#334155');
             ctx.fillStyle = gradient;
-            this.roundRect(ctx, 0, 0, width, topHeight, cornerRadius, true, false);
+            this.roundRect(ctx, 0, 0, width, topHeight, 0, true, false);
             ctx.fill();
 
             const qrSize = 300;
             const qrY = 110;
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
             const verificationUrl =
-                `${frontendUrl}/verify-visitor?` +
-                `code=${visitorCodeData.code}&visitor=${encodeURIComponent(
+                `${frontendUrl}/verify-visitor?code=${visitorCodeData.code}&visitor=${encodeURIComponent(
                     visitorCodeData.visitorName,
                 )}`;
 
@@ -128,12 +121,7 @@ export class VisitorCardService {
 
             ctx.fillStyle = '#1e293b';
             ctx.font = `bold 42px "${this.fontFamily}"`;
-            ctx.textAlign = 'center';
-            ctx.fillText(
-                String(visitorCodeData.visitorName || '').toUpperCase(),
-                width / 2,
-                bottomY,
-            );
+            ctx.fillText(String(visitorCodeData.visitorName || '').toUpperCase(), width / 2, bottomY);
 
             const codeY = bottomY + 70;
             ctx.fillStyle = '#64748b';
@@ -163,14 +151,7 @@ export class VisitorCardService {
                 visitorCodeData.occupant?.name ||
                 'Resident';
 
-            this.drawDetailRow(
-                ctx,
-                'Host:',
-                hostName,
-                labelX,
-                valueX,
-                detailsY + lineHeight,
-            );
+            this.drawDetailRow(ctx, 'Host:', hostName, labelX, valueX, detailsY + lineHeight);
 
             const expiryDate = new Date(visitorCodeData.expiresAt);
             const expiryText = expiryDate.toLocaleString('en-US', {
@@ -199,10 +180,7 @@ export class VisitorCardService {
             ctx.lineTo(width - 80, footerY - 30);
             ctx.stroke();
 
-            const estateName = String(
-                visitorCodeData.occupant?.estate?.name || '',
-            ).toUpperCase();
-
+            const estateName = String(visitorCodeData.occupant?.estate?.name || '').toUpperCase();
             if (estateName) {
                 ctx.fillStyle = '#1e293b';
                 ctx.font = `bold 14px "${this.fontFamily}"`;
@@ -273,11 +251,7 @@ export class VisitorCardService {
             const expiryDate = new Date(visitorCodeData.expiresAt);
             ctx.fillStyle = '#718096';
             ctx.font = `16px "${this.fontFamily}"`;
-            ctx.fillText(
-                `Valid until: ${expiryDate.toLocaleString()}`,
-                width / 2,
-                barcodeY + 160,
-            );
+            ctx.fillText(`Valid until: ${expiryDate.toLocaleString()}`, width / 2, barcodeY + 160);
 
             const filename = `barcode-${visitorCodeData.code}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);
