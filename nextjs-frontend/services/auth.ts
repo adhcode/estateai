@@ -22,7 +22,8 @@ export interface LoginResponse {
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await api.post('/auth/login', { email, password })
-    return response.data
+    // Backend wraps response in { success, data } format
+    return response.data.data || response.data
   },
 
   async logout() {

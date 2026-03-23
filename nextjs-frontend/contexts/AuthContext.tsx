@@ -66,7 +66,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const login = async (email: string, password: string) => {
         try {
             const response = await authService.login(email, password)
-            const { user: userData, access_token: token } = response
+            // Backend wraps response in { success, data } format
+            const loginData = response.data || response
+            const { user: userData, access_token: token } = loginData
 
             if (!userData) {
                 throw new Error('Invalid response from server')
