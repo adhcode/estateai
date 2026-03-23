@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useAuth } from '@/contexts/AuthContext'
 import { visitorsService } from '@/services/visitors'
 import type { VisitorCode } from '@/types'
 import { Clock, Eye, Plus, QrCode, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export default function VisitorsPage() {
+    const { user } = useAuth()
     const [visitorCodes, setVisitorCodes] = useState<VisitorCode[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -26,12 +28,16 @@ export default function VisitorsPage() {
     })
 
     useEffect(() => {
-        loadVisitorCodes()
-    }, [])
+        if (user?.estate?.id) {
+            loadVisitorCodes()
+        }
+    }, [user])
 
     const loadVisitorCodes = async () => {
+        if (!user?.estate?.id) return
+
         try {
-            const codes = await visitorsService.getVisitorCodes()
+            const codes = await visitorsService.getByEstate(user.estate.id)
             setVisitorCodes(codes)
         } catch (error) {
             console.error('Failed to load visitor codes:', error)
@@ -41,8 +47,17 @@ export default function VisitorsPage() {
     }
 
     const handleCreateVisitor = async () => {
+        if (!user?.estate?.id) return
+
         try {
-            await visitorsService.generateVisitorCode(newVisitor)
+            await visitorsService.generate({
+                visitorName: newVisitor.visitorName,
+                visitorPhone: newVisitor.visitorPhone,
+                purpose: newVisitor.purpose,
+                occupantId: newVisitor.unitId, // This should be occupantId
+                estateId: user.estate.id,
+                expiresAt: newVisitor.validUntil
+            })
             setIsCreateDialogOpen(false)
             setNewVisitor({
                 visitorName: '',
@@ -210,7 +225,7 @@ export default function VisitorsPage() {
                                     <TableCell>
                                         <div className="flex items-center space-x-1">
                                             <Clock className="h-4 w-4 text-muted-foreground" />
-                                            <span>{new Date(code.validUntil).toLocaleString()}</span>
+                                            <span>{new Date(code.expiresAt).toLocaleString()}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>{getStatusBadge(code.status)}</TableCell>

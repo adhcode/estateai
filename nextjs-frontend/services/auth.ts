@@ -1,5 +1,8 @@
 import api from './api'
 
+// Re-export api for other services
+export { api }
+
 export interface LoginResponse {
   user: {
     id: string
@@ -29,7 +32,7 @@ export const authService = {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error)
     }
-    
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
