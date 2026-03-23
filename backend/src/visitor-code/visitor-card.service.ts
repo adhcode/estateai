@@ -6,70 +6,65 @@ import * as QRCode from 'qrcode';
 
 type FontWeight = 'normal' | 'bold';
 
-function registerFontIfExists(
+const FONT_FAMILY = 'App Sans';
+
+function tryRegisterFont(
     fontPath: string,
     family: string,
     weight: FontWeight = 'normal',
-) {
+): boolean {
     if (!fs.existsSync(fontPath)) {
         console.warn(`⚠️ Font not found: ${fontPath}`);
-        return;
+        return false;
     }
 
-    registerFont(fontPath, { family, weight });
-    console.log(`✅ Registered font: ${family} (${weight}) -> ${fontPath}`);
+    try {
+        const stats = fs.statSync(fontPath);
+        console.log(`📁 Found font: ${fontPath} (${stats.size} bytes)`);
+
+        registerFont(fontPath, { family, weight });
+        console.log(`✅ Registered font: ${family} (${weight}) -> ${fontPath}`);
+        return true;
+    } catch (error: any) {
+        console.error(`❌ Could not register font: ${fontPath}`);
+        console.error(`   Reason: ${error.message}`);
+        return false;
+    }
 }
 
-// Register fonts once at module load
-try {
-    // Try bundled fonts first
-    const bundledFonts = [
-        { path: '/app/assets/fonts/DejaVuSans.ttf', weight: 'normal' as FontWeight },
-        { path: '/app/assets/fonts/DejaVuSans-Bold.ttf', weight: 'bold' as FontWeight },
+// Register system fonts once at module load
+(() => {
+    let registeredCount = 0;
+
+    const systemFonts = [
+        {
+            path: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            weight: 'normal' as FontWeight,
+        },
+        {
+            path: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+            weight: 'bold' as FontWeight,
+        },
     ];
 
-    let registeredCount = 0;
-    for (const font of bundledFonts) {
-        if (fs.existsSync(font.path)) {
-            registerFont(font.path, { family: 'App Sans', weight: font.weight });
-            console.log(`✅ Registered bundled font: App Sans (${font.weight}) -> ${font.path}`);
+    for (const font of systemFonts) {
+        if (tryRegisterFont(font.path, FONT_FAMILY, font.weight)) {
             registeredCount++;
-        } else {
-            console.warn(`⚠️ Bundled font not found: ${font.path}`);
-        }
-    }
-
-    // If no bundled fonts found, try system fonts as fallback
-    if (registeredCount === 0) {
-        console.warn('⚠️ No bundled fonts found, trying system fonts...');
-        const systemFonts = [
-            { path: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', weight: 'normal' as FontWeight },
-            { path: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', weight: 'bold' as FontWeight },
-        ];
-
-        for (const font of systemFonts) {
-            if (fs.existsSync(font.path)) {
-                registerFont(font.path, { family: 'App Sans', weight: font.weight });
-                console.log(`✅ Registered system font: App Sans (${font.weight}) -> ${font.path}`);
-                registeredCount++;
-            }
         }
     }
 
     if (registeredCount === 0) {
-        console.error('❌ NO FONTS REGISTERED! Text will not render properly.');
+        console.error('❌ No fonts registered. Canvas will fall back to defaults.');
     } else {
         console.log(`✅ Total fonts registered: ${registeredCount}`);
     }
-} catch (error: any) {
-    console.error('❌ Font registration failed:', error.message);
-}
+})();
 
 @Injectable()
 export class VisitorCardService {
     private readonly logger = new Logger(VisitorCardService.name);
     private readonly outputDir = path.join(process.cwd(), 'uploads', 'visitor-cards');
-    private readonly fontFamily = 'App Sans';
+    private readonly fontFamily = FONT_FAMILY;
 
     constructor() {
         if (!fs.existsSync(this.outputDir)) {
@@ -89,12 +84,10 @@ export class VisitorCardService {
             const ctx = canvas.getContext('2d');
             const cornerRadius = 0;
 
-            // Background
             ctx.fillStyle = '#ffffff';
             this.roundRect(ctx, 0, 0, width, height, cornerRadius);
             ctx.fill();
 
-            // Top gradient section
             const topHeight = 520;
             const gradient = ctx.createLinearGradient(0, 0, 0, topHeight);
             gradient.addColorStop(0, '#1e293b');
@@ -103,7 +96,6 @@ export class VisitorCardService {
             this.roundRect(ctx, 0, 0, width, topHeight, cornerRadius, true, false);
             ctx.fill();
 
-            // QR section
             const qrSize = 300;
             const qrY = 110;
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -126,18 +118,14 @@ export class VisitorCardService {
             const qrImage = await loadImage(qrDataUrl);
             const qrX = (width - qrSize) / 2;
             ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-            this.logger.debug('QR code drawn successfully');
 
-            // VISITOR
             ctx.fillStyle = '#ffffff';
             ctx.font = `bold 56px "${this.fontFamily}"`;
             ctx.textAlign = 'center';
             ctx.fillText('V I S I T O R', width / 2, qrY + qrSize + 70);
 
-            // Bottom content
             const bottomY = topHeight + 40;
 
-            // Visitor name
             ctx.fillStyle = '#1e293b';
             ctx.font = `bold 42px "${this.fontFamily}"`;
             ctx.textAlign = 'center';
@@ -147,7 +135,6 @@ export class VisitorCardService {
                 bottomY,
             );
 
-            // Access code
             const codeY = bottomY + 70;
             ctx.fillStyle = '#64748b';
             ctx.font = `20px "${this.fontFamily}"`;
@@ -157,7 +144,6 @@ export class VisitorCardService {
             ctx.font = `bold 52px "${this.fontFamily}"`;
             ctx.fillText(String(visitorCodeData.code || ''), width / 2, codeY + 55);
 
-            // Details
             const detailsY = codeY + 120;
             const lineHeight = 50;
             const labelX = 100;
@@ -204,7 +190,6 @@ export class VisitorCardService {
                 detailsY + lineHeight * 2,
             );
 
-            // Footer
             const footerY = height - 120;
 
             ctx.strokeStyle = '#e2e8f0';
@@ -214,7 +199,10 @@ export class VisitorCardService {
             ctx.lineTo(width - 80, footerY - 30);
             ctx.stroke();
 
-            const estateName = String(visitorCodeData.occupant?.estate?.name || '').toUpperCase();
+            const estateName = String(
+                visitorCodeData.occupant?.estate?.name || '',
+            ).toUpperCase();
+
             if (estateName) {
                 ctx.fillStyle = '#1e293b';
                 ctx.font = `bold 14px "${this.fontFamily}"`;
@@ -222,7 +210,6 @@ export class VisitorCardService {
                 ctx.fillText(estateName, width / 2, footerY + 45);
             }
 
-            // Save file
             const filename = `visitor-${visitorCodeData.code}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);
             const buffer = canvas.toBuffer('image/png');
@@ -244,11 +231,9 @@ export class VisitorCardService {
             const canvas = createCanvas(width, height);
             const ctx = canvas.getContext('2d');
 
-            // Background
             ctx.fillStyle = '#f7fafc';
             ctx.fillRect(0, 0, width, height);
 
-            // Card
             ctx.fillStyle = '#ffffff';
             this.roundRect(ctx, 20, 20, width - 40, height - 40, 15);
             ctx.fill();
@@ -258,18 +243,15 @@ export class VisitorCardService {
             this.roundRect(ctx, 20, 20, width - 40, height - 40, 15);
             ctx.stroke();
 
-            // Title
             ctx.fillStyle = '#667eea';
             ctx.font = `bold 28px "${this.fontFamily}"`;
             ctx.textAlign = 'center';
             ctx.fillText('VISITOR ACCESS CODE', width / 2, 80);
 
-            // Visitor name
             ctx.fillStyle = '#1a202c';
             ctx.font = `bold 24px "${this.fontFamily}"`;
             ctx.fillText(String(visitorCodeData.visitorName || ''), width / 2, 130);
 
-            // Barcode-style code
             const code = String(visitorCodeData.code || '');
             const barcodeY = 180;
             const barWidth = 8;
@@ -285,11 +267,9 @@ export class VisitorCardService {
                 startX += barWidth + barSpacing;
             }
 
-            // Code text
             ctx.font = `bold 36px "${this.fontFamily}"`;
             ctx.fillText(code, width / 2, barcodeY + 120);
 
-            // Expiry
             const expiryDate = new Date(visitorCodeData.expiresAt);
             ctx.fillStyle = '#718096';
             ctx.font = `16px "${this.fontFamily}"`;
@@ -299,7 +279,6 @@ export class VisitorCardService {
                 barcodeY + 160,
             );
 
-            // Save file
             const filename = `barcode-${visitorCodeData.code}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);
             const buffer = canvas.toBuffer('image/png');
