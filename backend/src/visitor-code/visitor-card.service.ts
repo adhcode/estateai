@@ -22,13 +22,14 @@ function registerFontIfExists(
 
 // Register fonts once at module load
 try {
+    // Try bundled fonts first
     registerFontIfExists(
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/app/assets/fonts/DejaVuSans.ttf',
         'App Sans',
         'normal',
     );
     registerFontIfExists(
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/app/assets/fonts/DejaVuSans-Bold.ttf',
         'App Sans',
         'bold',
     );
