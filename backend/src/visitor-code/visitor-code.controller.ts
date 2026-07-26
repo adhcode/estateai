@@ -61,7 +61,7 @@ export class VisitorCodeController {
 
   @Post('test-generate')
   async generateTestCode(@Body() body: { visitorName: string; occupantId: string; validHours?: number }) {
-    const { visitorName, occupantId, validHours = 24 } = body;
+    const { visitorName, occupantId, validHours = 1 } = body;
 
     const generateDto = {
       visitorName,

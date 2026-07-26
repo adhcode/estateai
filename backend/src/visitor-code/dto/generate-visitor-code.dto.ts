@@ -22,7 +22,7 @@ export class GenerateVisitorCodeDto {
   @IsNumber()
   @Min(1)
   @Max(168) // Max 1 week
-  validHours?: number; // Default 2 hours
+  validHours?: number; // Default 1 hour
 
   @IsOptional()
   @IsDateString()

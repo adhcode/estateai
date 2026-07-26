@@ -755,7 +755,7 @@ export class ConversationService {
             const result = await this.estateWhatsAppService.generateAndSendVisitorCode({
                 occupantPhone: phoneNumber,
                 visitorName: visitorName,
-                validHours: 24, // Default 24 hours
+                validHours: 1, // Default 1 hour
             });
 
             if (result.success) {
@@ -2053,7 +2053,38 @@ export class ConversationService {
                 occupantPhone: phoneNumber,
             });
 
-            // If failed, send error message
+            // Check if user doesn't have a photo
+            if (!result.success && result.hasPhoto === false) {
+                this.logger.log(`User has no photo, asking to upload`);
+
+                responses.push({
+                    kind: 'interactive',
+                    to: phoneNumber,
+                    interactive: {
+                        type: 'button',
+                        body: {
+                            text: "I'll generate your ID card!\n\nTo include your photo, please send a photo now.\n\nOr click 'Skip' to use a placeholder.",
+                        },
+                        action: {
+                            buttons: [
+                                {
+                                    type: 'reply',
+                                    reply: {
+                                        id: 'skip_photo',
+                                        title: 'Skip for Now',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                });
+
+                // Set state to await photo
+                await this.updateState(phoneNumber, 'AWAITING_RESIDENT_PHOTO');
+                return responses;
+            }
+
+            // If other failure, send error message
             if (!result.success) {
                 responses.push({
                     kind: 'text',
@@ -2063,7 +2094,7 @@ export class ConversationService {
                 return responses;
             }
 
-            // Success! Show follow-up options
+            // Success! ID card sent, show follow-up options
             responses.push({
                 kind: 'interactive',
                 to: phoneNumber,

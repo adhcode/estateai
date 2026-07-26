@@ -67,7 +67,7 @@ export class EstateWhatsAppService {
                 visitorName: params.visitorName,
                 visitorPhone: params.visitorPhone,
                 occupantId: occupant.id,
-                validHours: params.validHours || 2,
+                validHours: params.validHours || 1,
             });
 
             this.logger.log(`Visitor code generated: ${visitorCode.code} for ${visitorCode.visitorName}`);
@@ -657,7 +657,7 @@ export class EstateWhatsAppService {
      */
     async generateAndSendResidentId(params: {
         occupantPhone: string;
-    }): Promise<{ success: boolean; message: string }> {
+    }): Promise<{ success: boolean; message: string; hasPhoto?: boolean }> {
         try {
             this.logger.log(`Generating resident ID card for: ${params.occupantPhone}`);
 
@@ -676,7 +676,22 @@ export class EstateWhatsAppService {
                 };
             }
 
-            this.logger.log(`Found occupant: ${occupant.id}, generating ID card`);
+            this.logger.log(`Found occupant: ${occupant.id}, checking for photo...`);
+
+            // Check if occupant has a photo
+            if (!occupant.photoUrl) {
+                this.logger.log(`Occupant ${occupant.id} has no photo, need to ask for it`);
+                return {
+                    success: false,
+                    message: 'No photo found',
+                    hasPhoto: false,
+                };
+            }
+
+            this.logger.log(`Occupant has photo, generating ID card`);
+
+            // Show typing indicator
+            await this.messengerService.showTypingIndicator(params.occupantPhone);
 
             // Generate resident ID card
             const cardPath = await this.residentIdCardService.generateResidentIdCard(occupant);
@@ -689,40 +704,39 @@ export class EstateWhatsAppService {
                 this.logger.log(`✅ Resident ID card uploaded: ${cardUrl}`);
             } catch (uploadError) {
                 this.logger.error(`Failed to upload resident ID card: ${uploadError.message}`);
-                this.logger.warn(`Continuing without image`);
-                // Continue without image - better to send text than fail completely
+
+                await this.messengerService.sendText({
+                    to: params.occupantPhone,
+                    body: `Sorry, there was an error uploading your ID card. Please try again.`,
+                });
+
+                return {
+                    success: false,
+                    message: 'Failed to upload ID card',
+                };
             }
 
-            // Format resident ID for display
-            const residentId = this.formatResidentId(occupant.id);
-
-            // Send details to resident
-            const message =
-                `*Your Resident ID Card*\n\n` +
-                `Name: ${occupant.name}\n` +
-                `Resident ID: *${residentId}*\n` +
-                `Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n` +
-                `Estate: ${occupant.estate?.name}\n` +
-                `Type: ${occupant.type === 'RESIDENT' ? 'Primary Resident' : 'Household Member'}\n\n` +
-                (cardUrl ? `Your ID card is attached below. Show this at security checkpoints.` : `Your ID details above. Please contact admin for physical ID card.`);
-
-            await this.messengerService.sendText({
-                to: params.occupantPhone,
-                body: message,
-            });
-
-            // Send ID card image if upload succeeded
+            // Send ID card image only (no text message before)
             if (cardUrl) {
                 try {
                     await this.messengerService.sendMedia({
                         to: params.occupantPhone,
                         type: 'image',
                         url: cardUrl,
-                        caption: `Resident ID Card - ${occupant.name}`,
+                        caption: `${occupant.name}`,
                     });
                 } catch (mediaError) {
                     this.logger.error(`Failed to send media: ${mediaError.message}`);
-                    // Already sent text with details, so this is not critical
+
+                    await this.messengerService.sendText({
+                        to: params.occupantPhone,
+                        body: `Sorry, there was an error sending your ID card. Please try again.`,
+                    });
+
+                    return {
+                        success: false,
+                        message: 'Failed to send ID card',
+                    };
                 }
             }
 
@@ -731,6 +745,7 @@ export class EstateWhatsAppService {
             return {
                 success: true,
                 message: 'Resident ID card sent successfully',
+                hasPhoto: true,
             };
         } catch (error: any) {
             this.logger.error(`Error generating resident ID card: ${error.message}`);

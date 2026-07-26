@@ -103,21 +103,17 @@ export class ResidentIdCardService {
             const lineHeight = 60;
             ctx.textAlign = 'left';
 
-            // Resident ID
-            const residentId = this.formatResidentId(occupant.id);
-            this.drawDetailRow(ctx, 'Resident ID:', residentId, 120, 380, detailsY);
-
             // Unit
             const unitInfo = `${occupant.unit?.block || ''} ${occupant.unit?.flat || ''}`.trim();
-            this.drawDetailRow(ctx, 'Unit:', unitInfo, 120, 380, detailsY + lineHeight);
+            this.drawDetailRow(ctx, 'Unit:', unitInfo, 120, 380, detailsY);
 
             // Estate
             const estateName = occupant.estate?.name || 'Estate';
-            this.drawDetailRow(ctx, 'Estate:', estateName, 120, 380, detailsY + lineHeight * 2);
+            this.drawDetailRow(ctx, 'Estate:', estateName, 120, 380, detailsY + lineHeight);
 
             // Type
             const type = occupant.type === 'RESIDENT' ? 'Primary Resident' : 'Household Member';
-            this.drawDetailRow(ctx, 'Type:', type, 120, 380, detailsY + lineHeight * 3);
+            this.drawDetailRow(ctx, 'Type:', type, 120, 380, detailsY + lineHeight * 2);
 
             // Issue date
             const issueDate = new Date().toLocaleDateString('en-US', {
@@ -125,11 +121,11 @@ export class ResidentIdCardService {
                 day: 'numeric',
                 year: 'numeric',
             });
-            this.drawDetailRow(ctx, 'Issued:', issueDate, 120, 380, detailsY + lineHeight * 4);
+            this.drawDetailRow(ctx, 'Issued:', issueDate, 120, 380, detailsY + lineHeight * 3);
 
             // QR Code
             const qrSize = 220;
-            const qrY = detailsY + lineHeight * 5 + 40;
+            const qrY = detailsY + lineHeight * 4 + 40;
             const qrDataUrl = await this.generateQRCode(occupant);
             const qrImage = await loadImage(qrDataUrl);
             const qrX = (width - qrSize) / 2;
@@ -141,16 +137,8 @@ export class ResidentIdCardService {
             ctx.textAlign = 'center';
             ctx.fillText('Scan to verify resident status', width / 2, qrY + qrSize + 40);
 
-            // Footer separator
+            // Footer - Estate name and address (no separator line)
             const footerY = height - 100;
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(80, footerY - 20);
-            ctx.lineTo(width - 80, footerY - 20);
-            ctx.stroke();
-
-            // Footer - Estate name and address
             ctx.fillStyle = '#1e293b';
             ctx.font = `bold 20px "${this.fontFamily}"`;
             ctx.fillText(String(estateName).toUpperCase(), width / 2, footerY + 15);
@@ -162,6 +150,7 @@ export class ResidentIdCardService {
             }
 
             // Save to file
+            const residentId = this.formatResidentId(occupant.id);
             const filename = `resident-${residentId}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);
             const buffer = canvas.toBuffer('image/png');

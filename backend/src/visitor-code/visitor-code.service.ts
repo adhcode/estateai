@@ -16,7 +16,7 @@ export class VisitorCodeService {
   ) { }
 
   async generateCode(generateVisitorCodeDto: GenerateVisitorCodeDto) {
-    const { occupantId, validHours = 2, expiresAt, ...codeData } = generateVisitorCodeDto;
+    const { occupantId, validHours = 1, expiresAt, ...codeData } = generateVisitorCodeDto;
 
     if (!occupantId) {
       throw new BadRequestException('occupantId must be provided');
