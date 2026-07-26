@@ -152,6 +152,8 @@ export class TwilioWhatsAppProvider implements WhatsAppProvider {
                     msg.media = {
                         url: payload.MediaUrl0,
                         mimeType: payload.MediaContentType0,
+                        provider: 'twilio',
+                        type: 'image', // Simplified - Twilio sends different media types
                     };
                 }
 

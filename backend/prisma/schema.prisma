@@ -50,6 +50,8 @@ model Occupant {
   name              String
   email             String?
   phone             String?      // Optional for some occupants
+  photoUrl          String?      // URL to resident photo (cloud storage)
+  photoUploadedAt   DateTime?    // When photo was uploaded
   estateId          String
   unitId            String
   type              OccupantType @default(RESIDENT)

@@ -15,6 +15,8 @@ export interface InboundMessage {
         url?: string;
         mimeType?: string;
         caption?: string;
+        provider?: 'meta' | 'twilio';
+        type?: 'image' | 'audio' | 'video' | 'document';
     };
     interactive?: {
         type: 'button_reply' | 'list_reply';

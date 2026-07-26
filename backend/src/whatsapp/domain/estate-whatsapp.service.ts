@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { OccupantsService } from '../../occupants/occupants.service';
+import { ResidentIdCardService } from '../../resident-id/resident-id-card.service';
+import { ResidentPhotoService } from '../../resident-id/resident-photo.service';
 import { ImageUploadService } from '../../visitor-code/image-upload.service';
 import { QrCodeService } from '../../visitor-code/qr-code.service';
 import { VisitorCardService } from '../../visitor-code/visitor-card.service';
@@ -25,6 +27,10 @@ export class EstateWhatsAppService {
         private readonly visitorCardService: VisitorCardService,
         @Inject(forwardRef(() => ImageUploadService))
         private readonly imageUploadService: ImageUploadService,
+        @Inject(forwardRef(() => ResidentIdCardService))
+        private readonly residentIdCardService: ResidentIdCardService,
+        @Inject(forwardRef(() => ResidentPhotoService))
+        private readonly residentPhotoService: ResidentPhotoService,
     ) { }
 
     /**
@@ -644,6 +650,152 @@ export class EstateWhatsAppService {
                 message: error.message,
             };
         }
+    }
+
+    /**
+     * Generate and send resident ID card via WhatsApp
+     */
+    async generateAndSendResidentId(params: {
+        occupantPhone: string;
+    }): Promise<{ success: boolean; message: string }> {
+        try {
+            this.logger.log(`Generating resident ID card for: ${params.occupantPhone}`);
+
+            // Find occupant by phone
+            const occupant = await this.findOccupantByPhone(params.occupantPhone);
+
+            if (!occupant) {
+                await this.messengerService.sendText({
+                    to: params.occupantPhone,
+                    body: "Sorry, I couldn't find your account. Please make sure you're registered as a resident.",
+                });
+
+                return {
+                    success: false,
+                    message: 'Occupant not found',
+                };
+            }
+
+            this.logger.log(`Found occupant: ${occupant.id}, generating ID card`);
+
+            // Generate resident ID card
+            const cardPath = await this.residentIdCardService.generateResidentIdCard(occupant);
+
+            // Upload to public image hosting
+            let cardUrl: string | null = null;
+            try {
+                this.logger.log(`Uploading resident ID card to cloud...`);
+                cardUrl = await this.imageUploadService.uploadImage(cardPath);
+                this.logger.log(`✅ Resident ID card uploaded: ${cardUrl}`);
+            } catch (uploadError) {
+                this.logger.error(`Failed to upload resident ID card: ${uploadError.message}`);
+                this.logger.warn(`Continuing without image`);
+                // Continue without image - better to send text than fail completely
+            }
+
+            // Format resident ID for display
+            const residentId = this.formatResidentId(occupant.id);
+
+            // Send details to resident
+            const message =
+                `*Your Resident ID Card*\n\n` +
+                `Name: ${occupant.name}\n` +
+                `Resident ID: *${residentId}*\n` +
+                `Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n` +
+                `Estate: ${occupant.estate?.name}\n` +
+                `Type: ${occupant.type === 'RESIDENT' ? 'Primary Resident' : 'Household Member'}\n\n` +
+                (cardUrl ? `Your ID card is attached below. Show this at security checkpoints.` : `Your ID details above. Please contact admin for physical ID card.`);
+
+            await this.messengerService.sendText({
+                to: params.occupantPhone,
+                body: message,
+            });
+
+            // Send ID card image if upload succeeded
+            if (cardUrl) {
+                try {
+                    await this.messengerService.sendMedia({
+                        to: params.occupantPhone,
+                        type: 'image',
+                        url: cardUrl,
+                        caption: `Resident ID Card - ${occupant.name}`,
+                    });
+                } catch (mediaError) {
+                    this.logger.error(`Failed to send media: ${mediaError.message}`);
+                    // Already sent text with details, so this is not critical
+                }
+            }
+
+            this.logger.log(`✅ Resident ID card sent successfully to ${params.occupantPhone}`);
+
+            return {
+                success: true,
+                message: 'Resident ID card sent successfully',
+            };
+        } catch (error: any) {
+            this.logger.error(`Error generating resident ID card: ${error.message}`);
+
+            await this.messengerService.sendText({
+                to: params.occupantPhone,
+                body: `Sorry, there was an error generating your ID card: ${error.message}`,
+            });
+
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+    }
+
+    /**
+     * Handle photo upload from WhatsApp
+     */
+    async handleResidentPhotoUpload(params: {
+        occupantPhone: string;
+        mediaId?: string;
+        mediaUrl?: string;
+        provider: 'meta' | 'twilio';
+    }): Promise<{ success: boolean; photoUrl?: string; message: string }> {
+        try {
+            this.logger.log(`Processing photo upload for ${params.occupantPhone}`);
+
+            // Find occupant
+            const occupant = await this.findOccupantByPhone(params.occupantPhone);
+            if (!occupant) {
+                return { success: false, message: 'Occupant not found' };
+            }
+
+            // Download and upload photo
+            const photoUrl = await this.residentPhotoService.handlePhotoUpload({
+                mediaId: params.mediaId,
+                mediaUrl: params.mediaUrl,
+                provider: params.provider,
+            });
+
+            // Save to occupant profile
+            await this.occupantsService.updatePhoto(occupant.id, photoUrl);
+
+            this.logger.log(`✅ Photo saved for ${occupant.name}: ${photoUrl}`);
+
+            return {
+                success: true,
+                photoUrl: photoUrl,
+                message: 'Photo uploaded successfully',
+            };
+        } catch (error) {
+            this.logger.error(`Error uploading photo: ${error.message}`);
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+    }
+
+    /**
+     * Format resident ID for display
+     */
+    private formatResidentId(occupantId: string): string {
+        return `RES-${occupantId.substring(0, 8).toUpperCase()}`;
     }
 
 }

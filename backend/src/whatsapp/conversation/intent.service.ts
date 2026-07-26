@@ -420,6 +420,28 @@ export class IntentService {
             };
         }
 
+        // Get resident ID
+        if (/\b(my\s+id|resident\s+id|id\s+card|get\s+id|show\s+id|my\s+card|request\s+id|generate\s+id)\b/i.test(lowerText)) {
+            return {
+                name: 'get_resident_id',
+                displayName: 'Get Resident ID',
+                confidence: 0.95,
+                parameters: {},
+                isFallback: false,
+            };
+        }
+
+        // Update resident photo
+        if (/(update|change|edit|upload|add)\s+(my\s+)?(photo|picture|image)/i.test(lowerText)) {
+            return {
+                name: 'update_resident_photo',
+                displayName: 'Update Resident Photo',
+                confidence: 0.95,
+                parameters: {},
+                isFallback: false,
+            };
+        }
+
         // Help
         if (/help|what can|how do|commands|options/i.test(lowerText)) {
             return {

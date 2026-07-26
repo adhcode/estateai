@@ -306,6 +306,16 @@ export class ConversationService {
                 }
             }
 
+            // Check if we're waiting for resident photo (for ID card generation)
+            if (context.state === 'AWAITING_RESIDENT_PHOTO') {
+                return await this.handlePhotoUploadForId(message, context);
+            }
+
+            // Check if we're waiting for photo update
+            if (context.state === 'AWAITING_PHOTO_UPDATE') {
+                return await this.handlePhotoUpdate(message, context);
+            }
+
             // Check if this is an interactive button response
             let messageText = message.text || '';
             if (message.interactive?.buttonReply) {
@@ -500,6 +510,23 @@ export class ConversationService {
                     return await this.showEditMemberOptions(message.from);
                 }
 
+                // Handle skip photo button
+                if (buttonId === 'skip_photo') {
+                    this.logger.log(`User skipped photo upload`);
+                    // Clear photo state
+                    context.state = 'idle';
+                    await this.stateStore.saveContext(context);
+
+                    // Generate ID card without photo
+                    return await this.handleGetResidentId(message.from, []);
+                }
+
+                // Handle get resident ID button
+                if (buttonId === 'get_resident_id') {
+                    this.logger.log(`User clicked get resident ID button`);
+                    return await this.handleGetResidentId(message.from, []);
+                }
+
                 messageText = this.mapButtonToCommand(buttonId);
                 this.logger.log(`Button clicked: ${buttonId} → "${messageText}"`);
             }
@@ -563,6 +590,8 @@ export class ConversationService {
             'remove_household': 'remove household member',
             'manage_household': 'manage household',
             'manage_visitors': 'manage visitors',
+            'skip_photo': 'skip photo',
+            'get_resident_id': 'my ID',
         };
 
         return buttonMap[buttonId] || buttonId;
@@ -633,6 +662,14 @@ export class ConversationService {
 
             case 'edit household member':
                 await this.handleEditHouseholdMember(intent, message.from, responses);
+                break;
+
+            case 'get resident id':
+                await this.handleGetResidentId(message.from, responses);
+                break;
+
+            case 'update resident photo':
+                await this.handleUpdatePhoto(message.from, responses);
                 break;
 
             case 'fallback':
@@ -1997,11 +2034,287 @@ export class ConversationService {
             context.data = { ...context.data, ...data };
         }
         await this.stateStore.saveContext(context);
-        this.logger.log(`State updated successfully for ${userId}: ${state}`);
     }
 
     /**
-     * Show edit member options with individual member buttons
+     * Handle get resident ID request
+     */
+    private async handleGetResidentId(
+        phoneNumber: string,
+        responses: OutgoingMessage[],
+    ): Promise<OutgoingMessage[]> {
+        try {
+            await this.showTypingIndicator(phoneNumber);
+
+            this.logger.log(`Generating resident ID for ${phoneNumber}`);
+
+            // Call domain service to generate and send ID
+            const result = await this.estateWhatsAppService.generateAndSendResidentId({
+                occupantPhone: phoneNumber,
+            });
+
+            // If failed, send error message
+            if (!result.success) {
+                responses.push({
+                    kind: 'text',
+                    to: phoneNumber,
+                    body: `Sorry, I couldn't generate your ID card. ${result.message}`,
+                });
+                return responses;
+            }
+
+            // Success! Show follow-up options
+            responses.push({
+                kind: 'interactive',
+                to: phoneNumber,
+                interactive: {
+                    type: 'button',
+                    body: {
+                        text: 'What would you like to do next?',
+                    },
+                    action: {
+                        buttons: [
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'generate_code',
+                                    title: 'Visitor Code',
+                                },
+                            },
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'list_visitors',
+                                    title: 'My Visitors',
+                                },
+                            },
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'help',
+                                    title: 'Menu',
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            return responses;
+        } catch (error) {
+            this.logger.error(`Error handling get resident ID: ${error.message}`);
+            responses.push({
+                kind: 'text',
+                to: phoneNumber,
+                body: `Sorry, there was an error generating your ID card. Please try again.`,
+            });
+            return responses;
+        }
+    }
+
+    /**
+     * Handle update photo intent
+     */
+    private async handleUpdatePhoto(
+        phoneNumber: string,
+        responses: OutgoingMessage[],
+    ): Promise<void> {
+        responses.push({
+            kind: 'text',
+            to: phoneNumber,
+            body: 'Please send your new photo now. 📸',
+        });
+
+        // Set state to await photo
+        await this.updateState(phoneNumber, 'AWAITING_PHOTO_UPDATE');
+    }
+
+    /**
+     * Handle photo upload when generating ID
+     */
+    private async handlePhotoUploadForId(
+        message: InboundMessage,
+        context: ConversationContext,
+    ): Promise<OutgoingMessage[]> {
+        const responses: OutgoingMessage[] = [];
+
+        // Check if user sent a photo
+        if (message.media && message.media.type === 'image') {
+            await this.showTypingIndicator(message.from);
+
+            this.logger.log(`Photo received from ${message.from}, processing...`);
+
+            // Process photo
+            const result = await this.estateWhatsAppService.handleResidentPhotoUpload({
+                occupantPhone: message.from,
+                mediaId: message.media.id,
+                mediaUrl: message.media.url,
+                provider: message.media.provider || 'meta',
+            });
+
+            if (!result.success) {
+                responses.push({
+                    kind: 'text',
+                    to: message.from,
+                    body: `Sorry, I couldn't process your photo: ${result.message}\n\nPlease try again or click Skip.`,
+                });
+                return responses;
+            }
+
+            // Clear state
+            context.state = 'idle';
+            await this.stateStore.saveContext(context);
+
+            // Generate ID card with photo
+            responses.push({
+                kind: 'text',
+                to: message.from,
+                body: '✅ Photo received! Generating your ID card...',
+            });
+
+            await this.showTypingIndicator(message.from);
+
+            const idResult = await this.estateWhatsAppService.generateAndSendResidentId({
+                occupantPhone: message.from,
+            });
+
+            if (idResult.success) {
+                responses.push({
+                    kind: 'text',
+                    to: message.from,
+                    body: 'Your ID card with your photo is ready! ✨',
+                });
+            }
+
+            // Add follow-up buttons
+            responses.push({
+                kind: 'interactive',
+                to: message.from,
+                interactive: {
+                    type: 'button',
+                    body: {
+                        text: 'What would you like to do next?',
+                    },
+                    action: {
+                        buttons: [
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'generate_code',
+                                    title: 'Visitor Code',
+                                },
+                            },
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'list_visitors',
+                                    title: 'My Visitors',
+                                },
+                            },
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'help',
+                                    title: 'Menu',
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            return responses;
+        }
+
+        // User didn't send a photo (sent text instead)
+        responses.push({
+            kind: 'text',
+            to: message.from,
+            body: 'Please send a photo (not text) or click "Skip for Now" button.',
+        });
+
+        return responses;
+    }
+
+    /**
+     * Handle photo update request
+     */
+    private async handlePhotoUpdate(
+        message: InboundMessage,
+        context: ConversationContext,
+    ): Promise<OutgoingMessage[]> {
+        const responses: OutgoingMessage[] = [];
+
+        if (message.media && message.media.type === 'image') {
+            await this.showTypingIndicator(message.from);
+
+            this.logger.log(`Photo update received from ${message.from}, processing...`);
+
+            const result = await this.estateWhatsAppService.handleResidentPhotoUpload({
+                occupantPhone: message.from,
+                mediaId: message.media.id,
+                mediaUrl: message.media.url,
+                provider: message.media.provider || 'meta',
+            });
+
+            // Clear state
+            context.state = 'idle';
+            await this.stateStore.saveContext(context);
+
+            if (!result.success) {
+                responses.push({
+                    kind: 'text',
+                    to: message.from,
+                    body: `Sorry, I couldn't update your photo: ${result.message}`,
+                });
+                return responses;
+            }
+
+            // Photo updated successfully
+            responses.push({
+                kind: 'interactive',
+                to: message.from,
+                interactive: {
+                    type: 'button',
+                    body: {
+                        text: '✅ Photo updated successfully!\n\nYour ID card will now use this photo.\n\nWould you like to see your updated ID card?',
+                    },
+                    action: {
+                        buttons: [
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'get_resident_id',
+                                    title: 'Yes, Show ID',
+                                },
+                            },
+                            {
+                                type: 'reply',
+                                reply: {
+                                    id: 'help',
+                                    title: 'No, Later',
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            return responses;
+        }
+
+        // Not a photo
+        responses.push({
+            kind: 'text',
+            to: message.from,
+            body: 'Please send a photo (not text).',
+        });
+
+        return responses;
+    }
+
+    /**
+     * Show edit member options (helper to display list of members to edit)
      */
     private async showEditMemberOptions(phoneNumber: string): Promise<OutgoingMessage[]> {
         const responses: OutgoingMessage[] = [];
@@ -2012,41 +2325,44 @@ export class ConversationService {
             const result = await this.estateWhatsAppService.listHouseholdMembers(phoneNumber);
 
             if (result.success && result.members && result.members.length > 0) {
-                // Show up to 3 members as buttons
-                const membersToShow = result.members.slice(0, 3);
+                // WhatsApp allows max 3 buttons, so show up to 2 members + back button
+                const membersToShow = result.members.slice(0, 2);
+                const buttons = membersToShow.map(member => ({
+                    type: 'reply' as const,
+                    reply: {
+                        id: `edit_member_${member.name.replace(/\s+/g, '_')}`,
+                        title: member.name.length > 20
+                            ? member.name.substring(0, 17) + '...'
+                            : member.name,
+                    },
+                }));
 
-                if (membersToShow.length > 0) {
-                    const buttons = membersToShow.map(member => ({
-                        type: 'reply' as const,
-                        reply: {
-                            id: `edit_member_${member.name.replace(/\s+/g, '_')}`,
-                            title: `Edit ${member.name.split(' ')[0]}`, // Use first name only
+                // Add back button
+                buttons.push({
+                    type: 'reply' as const,
+                    reply: {
+                        id: 'list_household',
+                        title: 'Back',
+                    },
+                });
+
+                const memberListText = result.members.map((m, i) =>
+                    `${i + 1}. ${m.name}`
+                ).join('\n');
+
+                responses.push({
+                    kind: 'interactive',
+                    to: phoneNumber,
+                    interactive: {
+                        type: 'button',
+                        body: {
+                            text: `Select a member to edit:\n\n${memberListText}\n\n${result.members.length > 2 ? `💡 Showing first 2 of ${result.members.length} members. Type member name to edit others.` : ''}`,
                         },
-                    }));
-
-                    responses.push({
-                        kind: 'interactive',
-                        to: phoneNumber,
-                        interactive: {
-                            type: 'button',
-                            body: {
-                                text: `Select a member to edit their phone number:`,
-                            },
-                            action: {
-                                buttons: buttons,
-                            },
+                        action: {
+                            buttons: buttons,
                         },
-                    });
-                }
-
-                // If more than 3 members, show additional instructions
-                if (result.members.length > 3) {
-                    responses.push({
-                        kind: 'text',
-                        to: phoneNumber,
-                        body: `To edit other members, type:\n"Edit [member name]"\n\nExample: "Edit John"`,
-                    });
-                }
+                    },
+                });
             } else {
                 responses.push({
                     kind: 'text',
@@ -2059,17 +2375,10 @@ export class ConversationService {
             responses.push({
                 kind: 'text',
                 to: phoneNumber,
-                body: `Sorry, there was an error loading household members.`,
+                body: `Sorry, there was an error loading your household members.`,
             });
         }
 
         return responses;
-    }
-
-    /**
-     * Clear conversation context
-     */
-    async clearContext(userId: string): Promise<void> {
-        await this.stateStore.clearContext(userId);
     }
 }

@@ -251,4 +251,54 @@ export class OccupantsService {
       orderBy: { name: 'asc' },
     });
   }
+
+  /**
+   * Update occupant photo
+   */
+  async updatePhoto(occupantId: string, photoUrl: string) {
+    const occupant = await this.prisma.occupant.findUnique({
+      where: { id: occupantId },
+    });
+
+    if (!occupant) {
+      throw new NotFoundException('Occupant not found');
+    }
+
+    return this.prisma.occupant.update({
+      where: { id: occupantId },
+      data: {
+        photoUrl: photoUrl,
+        photoUploadedAt: new Date(),
+      },
+      include: {
+        estate: true,
+        unit: true,
+        primaryOccupant: true,
+        householdMembers: true,
+      },
+    });
+  }
+
+  /**
+   * Get occupant with photo
+   */
+  async findOneWithPhoto(occupantId: string) {
+    return this.prisma.occupant.findUnique({
+      where: { id: occupantId },
+      select: {
+        id: true,
+        name: true,
+        photoUrl: true,
+        photoUploadedAt: true,
+        phone: true,
+        email: true,
+        type: true,
+        estateId: true,
+        unitId: true,
+        isActive: true,
+        estate: true,
+        unit: true,
+      },
+    });
+  }
 }

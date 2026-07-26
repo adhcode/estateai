@@ -8,6 +8,26 @@
 
 > A comprehensive AI-powered estate management system with WhatsApp integration, intelligent visitor management, and real-time security features.
 
+## 📚 Documentation
+
+**For complete documentation, please see [DOCUMENTATION.md](./DOCUMENTATION.md)**
+
+The comprehensive documentation includes:
+- Complete setup and installation guide
+- Estate and unit management
+- Visitor management system
+- WhatsApp integration guide
+- Security features
+- Deployment instructions
+- API reference
+- Troubleshooting guide
+
+## Quick Links
+
+- **[Full Documentation](./DOCUMENTATION.md)** - Everything you need to know
+- **[Quick Start](#quick-start)** - Get up and running in minutes
+- **[Features](#features)** - What EstateAI can do
+
 ## 🌟 Features
 
 ### 🤖 AI-Powered Messaging
@@ -295,13 +315,16 @@ We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTIN
 - Conventional commits
 - Test coverage > 80%
 
-## 📚 Documentation
+---
 
-- [API Documentation](./backend/API_ENDPOINTS.md)
-- [WhatsApp Setup Guide](./WHATSAPP_SETUP_GUIDE.md)
-- [Security Admin Guide](./SECURITY_ADMIN_GUIDE.md)
-- [Testing Guide](./backend/TESTING_GUIDE.md)
-- [Optimization Guide](./backend/OPTIMIZATION_GUIDE.md)
+## 📖 Need Help?
+
+- **Getting Started**: See [Quick Start](#quick-start) below
+- **Full Documentation**: [DOCUMENTATION.md](./DOCUMENTATION.md)
+- **Issues**: [GitHub Issues](https://github.com/adhcode/estateai/issues)
+- **Support**: Contact the development team
+
+---
 
 ## 🛠️ Tech Stack
 

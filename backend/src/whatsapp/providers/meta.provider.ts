@@ -334,6 +334,8 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
                                 id: mediaData?.id,
                                 mimeType: mediaData?.mime_type,
                                 caption: mediaData?.caption,
+                                provider: 'meta',
+                                type: msg.type as 'image' | 'audio' | 'video' | 'document',
                             };
                         }
 

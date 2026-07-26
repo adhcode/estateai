@@ -7,6 +7,7 @@ import { CommonModule } from './common/common.module';
 import { EstatesModule } from './estates/estates.module';
 import { OccupantsModule } from './occupants/occupants.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ResidentIdModule } from './resident-id/resident-id.module';
 import { UnitsModule } from './units/units.module';
 import { VisitorCodeModule } from './visitor-code/visitor-code.module';
 import { VisitorsModule } from './visitors/visitors.module';
@@ -22,6 +23,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     VisitorsModule,
     UnitsModule,
     VisitorCodeModule,
+    ResidentIdModule,     // NEW: Resident ID card system
     WhatsAppModule,       // Current WhatsApp system
     AdminModule,
   ],
