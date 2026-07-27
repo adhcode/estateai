@@ -316,6 +316,74 @@ export class ConversationService {
                 return await this.handlePhotoUpdate(message, context);
             }
 
+            // Check if we're waiting for visitor code confirmation (yes/no)
+            if (context.state === 'awaiting_visitor_code_confirmation') {
+                this.logger.log(`User is in confirmation state, checking response`);
+                const response = message.text?.toLowerCase().trim();
+                const visitorName = context.data.pendingVisitorName;
+
+                if (!visitorName) {
+                    context.state = 'idle';
+                    await this.stateStore.saveContext(context);
+                    return [{
+                        kind: 'text',
+                        to: message.from,
+                        body: `Sorry, I lost track of the visitor name. Please try again.`,
+                    }];
+                }
+
+                // Check for yes/affirmative response
+                if (response && (
+                    response === 'yes' ||
+                    response === 'y' ||
+                    response === 'yeah' ||
+                    response === 'yep' ||
+                    response === 'sure' ||
+                    response === 'ok' ||
+                    response === 'okay'
+                )) {
+                    this.logger.log(`User confirmed - proceeding to ask for phone`);
+                    context.state = 'AWAITING_VISITOR_PHONE';
+                    context.data.visitorName = visitorName;
+                    delete context.data.pendingVisitorName;
+                    await this.stateStore.saveContext(context);
+
+                    return [{
+                        kind: 'text',
+                        to: message.from,
+                        body: `Great! What's ${visitorName}'s phone number?\n\n(Or reply "skip" if you don't have it)`,
+                    }];
+                }
+
+                // Check for no/negative response
+                if (response && (
+                    response === 'no' ||
+                    response === 'n' ||
+                    response === 'nope' ||
+                    response === 'cancel' ||
+                    response === 'nah'
+                )) {
+                    this.logger.log(`User declined - cancelling`);
+                    context.state = 'idle';
+                    delete context.data.pendingVisitorName;
+                    delete context.data.visitorAtGateTimestamp;
+                    await this.stateStore.saveContext(context);
+
+                    return [{
+                        kind: 'text',
+                        to: message.from,
+                        body: `Okay, no problem! Let me know if you need anything else.`,
+                    }];
+                }
+
+                // Unclear response - ask again
+                return [{
+                    kind: 'text',
+                    to: message.from,
+                    body: `Please reply with "yes" or "no". Do you want to generate a code for ${visitorName}?`,
+                }];
+            }
+
             // Check if this is an interactive button response
             let messageText = message.text || '';
             if (message.interactive?.buttonReply) {
@@ -525,6 +593,49 @@ export class ConversationService {
                 if (buttonId === 'get_resident_id') {
                     this.logger.log(`User clicked get resident ID button`);
                     return await this.handleGetResidentId(message.from, []);
+                }
+
+                // Handle visitor code confirmation - YES
+                if (buttonId === 'confirm_visitor_yes') {
+                    this.logger.log(`User confirmed visitor code generation`);
+                    const visitorName = context.data.pendingVisitorName;
+
+                    if (!visitorName) {
+                        return [{
+                            kind: 'text',
+                            to: message.from,
+                            body: `Sorry, I lost track of the visitor name. Please try again.`,
+                        }];
+                    }
+
+                    // Update state to await phone number
+                    context.state = 'AWAITING_VISITOR_PHONE';
+                    context.data.visitorName = visitorName;
+                    delete context.data.pendingVisitorName;
+                    await this.stateStore.saveContext(context);
+
+                    return [{
+                        kind: 'text',
+                        to: message.from,
+                        body: `Great! What's ${visitorName}'s phone number?\n\n(Or reply "skip" if you don't have it)`,
+                    }];
+                }
+
+                // Handle visitor code confirmation - NO
+                if (buttonId === 'confirm_visitor_no') {
+                    this.logger.log(`User declined visitor code generation`);
+
+                    // Clear state
+                    context.state = 'idle';
+                    delete context.data.pendingVisitorName;
+                    delete context.data.visitorAtGateTimestamp;
+                    await this.stateStore.saveContext(context);
+
+                    return [{
+                        kind: 'text',
+                        to: message.from,
+                        body: `Okay, no problem! Let me know if you need anything else.`,
+                    }];
                 }
 
                 messageText = this.mapButtonToCommand(buttonId);
@@ -982,50 +1093,42 @@ export class ConversationService {
 
             this.logger.log(`Visitor at gate: ${visitorName}`);
 
-            // Acknowledge receipt
+            // Store visitor name in context for confirmation
+            const context = await this.stateStore.getContext(phoneNumber);
+            context.state = 'awaiting_visitor_code_confirmation';
+            context.data.pendingVisitorName = visitorName;
+            context.data.visitorAtGateTimestamp = new Date().toISOString();
+            await this.stateStore.saveContext(context);
+
+            // Ask for confirmation with Yes/No buttons
             responses.push({
                 kind: 'interactive',
                 to: phoneNumber,
                 interactive: {
                     type: 'button',
                     body: {
-                        text: `Got it! ${visitorName} is at the gate.\n\nWhat would you like to do?`,
+                        text: `Got it! Do you want to generate a visitor code for ${visitorName}?`,
                     },
                     action: {
                         buttons: [
                             {
                                 type: 'reply',
                                 reply: {
-                                    id: 'generate_code',
-                                    title: 'Generate Code',
+                                    id: 'confirm_visitor_yes',
+                                    title: 'Yes ✓',
                                 },
                             },
                             {
                                 type: 'reply',
                                 reply: {
-                                    id: 'list_visitors',
-                                    title: 'Check Status',
-                                },
-                            },
-                            {
-                                type: 'reply',
-                                reply: {
-                                    id: 'help',
-                                    title: 'Done',
+                                    id: 'confirm_visitor_no',
+                                    title: 'No',
                                 },
                             },
                         ],
                     },
                 },
             });
-
-            // Store visitor name in context for quick code generation
-            const context = await this.stateStore.getContext(phoneNumber);
-            context.data.visitorAtGate = {
-                name: visitorName,
-                timestamp: new Date().toISOString(),
-            };
-            await this.stateStore.saveContext(context);
 
         } catch (error) {
             this.logger.error(`Error handling visitor at gate: ${error.message}`);
