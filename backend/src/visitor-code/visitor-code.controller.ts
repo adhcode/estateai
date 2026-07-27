@@ -72,6 +72,18 @@ export class VisitorCodeController {
 
     const result = await this.visitorCodeService.generateCode(generateDto);
 
+    // Format time with timezone (WAT - West Africa Time, UTC+1)
+    const expiryTime = new Date(result.expiresAt);
+    const formattedExpiry = expiryTime.toLocaleString('en-US', {
+      timeZone: 'Africa/Lagos',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
     return {
       success: true,
       message: `Test code generated for ${visitorName}, valid for ${validHours} hours`,
@@ -79,7 +91,7 @@ export class VisitorCodeController {
         code: result.code,
         visitorName: result.visitorName,
         expiresAt: result.expiresAt,
-        validUntil: new Date(result.expiresAt).toLocaleString()
+        validUntil: formattedExpiry
       }
     };
   }

@@ -49,12 +49,24 @@ export class SecurityVerificationController {
 
   private async sendAccessGrantedConfirmation(visitorCode: any) {
     try {
+      // Format time with timezone (WAT - West Africa Time, UTC+1)
+      const entryTime = new Date();
+      const formattedEntry = entryTime.toLocaleString('en-US', {
+        timeZone: 'Africa/Lagos',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
       const confirmationMessage =
         `🎉 *Access Granted!* 🎉\n\n` +
         `✅ Welcome to ${visitorCode.occupant?.estate?.name || 'the estate'}, ${visitorCode.visitorName}!\n\n` +
         `🏢 You're visiting: ${visitorCode.occupant?.name}\n` +
         `📍 Unit: ${visitorCode.occupant?.unit?.block} ${visitorCode.occupant?.unit?.flat}\n` +
-        `⏰ Entry time: ${new Date().toLocaleString()}\n\n` +
+        `⏰ Entry time: ${formattedEntry}\n\n` +
         `🚪 Please proceed to the unit. The resident has been notified of your arrival.\n\n` +
         `💬 Have a great visit! Reply if you need any assistance.`;
 

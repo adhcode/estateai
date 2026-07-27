@@ -71,12 +71,24 @@ export class QrCodeService {
     shareMessage: string;
   }> {
     // Create a comprehensive share message
-    const shareMessage = 
+    // Format time with timezone (WAT - West Africa Time, UTC+1)
+    const expiryTime = new Date(visitorCodeData.expiresAt);
+    const formattedExpiry = expiryTime.toLocaleString('en-US', {
+      timeZone: 'Africa/Lagos',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const shareMessage =
       `🏠 *${visitorCodeData.occupant?.estate?.name}* - Visitor Access\n\n` +
       `👤 Visitor: *${visitorCodeData.visitorName}*\n` +
       `🔑 Access Code: *${visitorCodeData.code}*\n` +
       `🏢 Unit: ${visitorCodeData.occupant?.unit?.block} ${visitorCodeData.occupant?.unit?.flat}\n` +
-      `⏰ Valid Until: ${new Date(visitorCodeData.expiresAt).toLocaleString()}\n\n` +
+      `⏰ Valid Until: ${formattedExpiry}\n\n` +
       `📍 Address: ${visitorCodeData.occupant?.estate?.address}\n` +
       `📞 Estate Contact: ${visitorCodeData.occupant?.estate?.phoneNumber}\n\n` +
       `🚪 Present this code at the gate for entry.`;

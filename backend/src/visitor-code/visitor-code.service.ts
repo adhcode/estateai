@@ -95,6 +95,14 @@ export class VisitorCodeService {
       },
     });
 
+    // Log what came back from database
+    this.logger.log(`📦 Visitor code created in database:`);
+    this.logger.log(`  - Code: ${visitorCode.code}`);
+    this.logger.log(`  - ExpiresAt (from DB): ${visitorCode.expiresAt}`);
+    this.logger.log(`  - ExpiresAt type: ${typeof visitorCode.expiresAt}`);
+    this.logger.log(`  - ExpiresAt (ISO): ${new Date(visitorCode.expiresAt).toISOString()}`);
+    this.logger.log(`  - ExpiresAt (Locale): ${new Date(visitorCode.expiresAt).toLocaleString()}`);
+
     // Generate QR codes for the visitor code
     const qrCodes = await this.qrCodeService.generateVisitorQRCode(visitorCode);
     const whatsappQR = await this.qrCodeService.generateWhatsAppShareableQR(visitorCode);
@@ -105,13 +113,24 @@ export class VisitorCodeService {
       console.log(`📱 Visitor phone provided: ${visitorCode.visitorPhone}`);
       console.log(`📱 Attempting to send WhatsApp to visitor...`);
       try {
+        // Format time with timezone (WAT - West Africa Time, UTC+1)
+        const formattedExpiry = expiration.toLocaleString('en-US', {
+          timeZone: 'Africa/Lagos',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
         const message =
           `🎉 *Visitor Code Generated!*\n\n` +
           `👤 Name: ${visitorCode.visitorName}\n` +
           `🔑 Code: *${visitorCode.code}*\n` +
           `🏢 Estate: ${occupant.estate.name}\n` +
           `📍 Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n` +
-          `⏰ Valid until: ${expiration.toLocaleString()}\n\n` +
+          `⏰ Valid until: ${formattedExpiry}\n\n` +
           `Show this code at the gate for entry.`;
 
         const messageId = await this.messengerService.sendText({
@@ -131,10 +150,21 @@ export class VisitorCodeService {
     // QR code will be included in the main WhatsApp response, not sent separately
     console.log(`📱 QR code will be included in main response (not sent separately)`);
 
+    // Format time with timezone for return message
+    const formattedExpiry = expiration.toLocaleString('en-US', {
+      timeZone: 'Africa/Lagos',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
     return {
       ...visitorCode,
       generatedBy: occupant.type.toLowerCase(),
-      message: `Visitor code generated successfully. Valid until ${expiration.toLocaleString()}${whatsappSent ? ' (WhatsApp sent to visitor)' : ''}`,
+      message: `Visitor code generated successfully. Valid until ${formattedExpiry}${whatsappSent ? ' (WhatsApp sent to visitor)' : ''}`,
       whatsappSent,
       qrCodes: {
         verification: qrCodes.qrCodeDataURL,

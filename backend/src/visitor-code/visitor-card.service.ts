@@ -249,9 +249,19 @@ export class VisitorCardService {
             ctx.fillText(code, width / 2, barcodeY + 120);
 
             const expiryDate = new Date(visitorCodeData.expiresAt);
+            // Format time with timezone (WAT - West Africa Time, UTC+1)
+            const formattedExpiry = expiryDate.toLocaleString('en-US', {
+                timeZone: 'Africa/Lagos',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
             ctx.fillStyle = '#718096';
             ctx.font = `16px "${this.fontFamily}"`;
-            ctx.fillText(`Valid until: ${expiryDate.toLocaleString()}`, width / 2, barcodeY + 160);
+            ctx.fillText(`Valid until: ${formattedExpiry}`, width / 2, barcodeY + 160);
 
             const filename = `barcode-${visitorCodeData.code}-${Date.now()}.png`;
             const filepath = path.join(this.outputDir, filename);

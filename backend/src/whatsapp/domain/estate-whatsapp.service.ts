@@ -104,10 +104,21 @@ export class EstateWhatsAppService {
             this.logger.log(`  - Expiry (ISO): ${expiryTime.toISOString()}`);
             this.logger.log(`  - Expiry (Locale): ${expiryTime.toLocaleString()}`);
 
+            // Format time with timezone (WAT - West Africa Time, UTC+1)
+            const formattedExpiry = expiryTime.toLocaleString('en-US', {
+                timeZone: 'Africa/Lagos',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+
             const occupantMessage =
                 `Access created for ${params.visitorName}\n\n` +
                 `Code: *${visitorCode.code}*\n` +
-                `Valid until: ${expiryTime.toLocaleString()}\n\n` +
+                `Valid until: ${formattedExpiry}\n\n` +
                 (cardUrl ? `Access card attached below.` : `Show this code at the gate for entry.`);
 
             await this.messengerService.sendText({
@@ -136,12 +147,23 @@ export class EstateWhatsAppService {
                 this.logger.log(`📱 Preparing message for visitor:`);
                 this.logger.log(`  - Expiry (Locale): ${visitorExpiryTime.toLocaleString()}`);
 
+                // Format time with timezone (WAT - West Africa Time, UTC+1)
+                const formattedVisitorExpiry = visitorExpiryTime.toLocaleString('en-US', {
+                    timeZone: 'Africa/Lagos',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
                 const visitorMessage =
                     `*${occupant.estate?.name || 'Estate'}* - Visitor Access\n\n` +
                     `Hello ${params.visitorName},\n\n` +
                     `Your Access Code: *${visitorCode.code}*\n` +
                     `Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n` +
-                    `Valid Until: ${visitorExpiryTime.toLocaleString()}\n\n` +
+                    `Valid Until: ${formattedVisitorExpiry}\n\n` +
                     `Address: ${occupant.estate?.address || 'Estate Address'}\n\n` +
                     `Please show this ${cardUrl ? 'card or access' : 'access'} code at the gate for entry.`;
 
@@ -206,7 +228,15 @@ export class EstateWhatsAppService {
                 `${params.visitorName} has arrived\n\n` +
                 `Access Granted\n` +
                 `Code: *${params.code}*\n` +
-                `Entry Time: ${new Date().toLocaleString()}\n` +
+                `Entry Time: ${new Date().toLocaleString('en-US', {
+                    timeZone: 'Africa/Lagos',
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                })}\n` +
                 `Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n\n` +
                 `If this was unexpected, please contact security immediately.`;
 

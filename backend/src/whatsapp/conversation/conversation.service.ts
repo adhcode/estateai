@@ -1341,10 +1341,21 @@ export class ConversationService {
                     const isExpired = expiryDate < new Date();
                     const status = isExpired ? 'EXPIRED' : visitor.status;
 
+                    // Format time with timezone (WAT - West Africa Time, UTC+1)
+                    const formattedExpiry = expiryDate.toLocaleString('en-US', {
+                        timeZone: 'Africa/Lagos',
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+
                     message += `${index + 1}. ${visitor.visitorName}\n`;
                     message += `   Code: *${visitor.code}*\n`;
                     message += `   Status: ${status}\n`;
-                    message += `   Expires: ${expiryDate.toLocaleString()}\n\n`;
+                    message += `   Expires: ${formattedExpiry}\n\n`;
                 });
 
                 responses.push({
