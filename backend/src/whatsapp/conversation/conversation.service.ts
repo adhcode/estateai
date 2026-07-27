@@ -319,8 +319,14 @@ export class ConversationService {
             // Check if we're waiting for visitor code confirmation (yes/no)
             if (context.state === 'awaiting_visitor_code_confirmation') {
                 this.logger.log(`User is in confirmation state, checking response`);
-                const response = message.text?.toLowerCase().trim();
+                this.logger.log(`Message text: "${message.text}"`);
+                this.logger.log(`Message type: ${message.type}`);
+
+                const response = (message.text || '').toLowerCase().trim();
                 const visitorName = context.data.pendingVisitorName;
+
+                this.logger.log(`Processed response: "${response}"`);
+                this.logger.log(`Visitor name from context: "${visitorName}"`);
 
                 if (!visitorName) {
                     context.state = 'idle';
@@ -342,7 +348,7 @@ export class ConversationService {
                     response === 'ok' ||
                     response === 'okay'
                 )) {
-                    this.logger.log(`User confirmed - generating code immediately`);
+                    this.logger.log(`✅ User confirmed - generating code immediately for ${visitorName}`);
 
                     // Clear state
                     context.state = 'idle';
@@ -359,6 +365,8 @@ export class ConversationService {
                         visitorName: visitorName,
                         validHours: 1,
                     });
+
+                    this.logger.log(`Code generation result: ${JSON.stringify({ success: result.success, code: result.code })}`);
 
                     // Don't send any message - the card is already sent by generateAndSendVisitorCode
                     // Just return empty array since card was already sent
@@ -387,6 +395,7 @@ export class ConversationService {
                 }
 
                 // Unclear response - ask again
+                this.logger.log(`⚠️ Unclear response: "${response}"`);
                 return [{
                     kind: 'text',
                     to: message.from,
