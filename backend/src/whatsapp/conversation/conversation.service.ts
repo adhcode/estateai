@@ -90,7 +90,7 @@ export class ConversationService {
                     return [{
                         kind: 'text',
                         to: message.from,
-                        body: `What's ${memberName}'s WhatsApp phone number?\n\nExample: +1234567890`,
+                        body: `What's ${memberName}'s WhatsApp phone number?\n\nExample: 08012345678`,
                     }];
                 } else {
                     return [{
@@ -342,17 +342,37 @@ export class ConversationService {
                     response === 'ok' ||
                     response === 'okay'
                 )) {
-                    this.logger.log(`User confirmed - proceeding to ask for phone`);
-                    context.state = 'AWAITING_VISITOR_PHONE';
-                    context.data.visitorName = visitorName;
+                    this.logger.log(`User confirmed - generating code immediately`);
+
+                    // Clear state
+                    context.state = 'idle';
                     delete context.data.pendingVisitorName;
+                    delete context.data.visitorAtGateTimestamp;
                     await this.stateStore.saveContext(context);
 
-                    return [{
-                        kind: 'text',
-                        to: message.from,
-                        body: `Great! What's ${visitorName}'s phone number?\n\n(Or reply "skip" if you don't have it)`,
-                    }];
+                    // Show typing indicator
+                    await this.showTypingIndicator(message.from);
+
+                    // Generate visitor code without phone number
+                    const result = await this.estateWhatsAppService.generateAndSendVisitorCode({
+                        occupantPhone: message.from,
+                        visitorName: visitorName,
+                        // No visitorPhone - generate code without it
+                    });
+
+                    if (result.success) {
+                        return [{
+                            kind: 'text',
+                            to: message.from,
+                            body: `✅ Visitor code generated for ${visitorName}!\n\nCode: *${result.code}*\n\nShare this code with them for entry.`,
+                        }];
+                    } else {
+                        return [{
+                            kind: 'text',
+                            to: message.from,
+                            body: `Sorry, I couldn't generate the code. ${result.message}`,
+                        }];
+                    }
                 }
 
                 // Check for no/negative response
@@ -608,17 +628,35 @@ export class ConversationService {
                         }];
                     }
 
-                    // Update state to await phone number
-                    context.state = 'AWAITING_VISITOR_PHONE';
-                    context.data.visitorName = visitorName;
+                    // Clear state and generate code immediately (no phone number needed)
+                    context.state = 'idle';
                     delete context.data.pendingVisitorName;
+                    delete context.data.visitorAtGateTimestamp;
                     await this.stateStore.saveContext(context);
 
-                    return [{
-                        kind: 'text',
-                        to: message.from,
-                        body: `Great! What's ${visitorName}'s phone number?\n\n(Or reply "skip" if you don't have it)`,
-                    }];
+                    // Show typing indicator
+                    await this.showTypingIndicator(message.from);
+
+                    // Generate visitor code without phone number
+                    const result = await this.estateWhatsAppService.generateAndSendVisitorCode({
+                        occupantPhone: message.from,
+                        visitorName: visitorName,
+                        // No visitorPhone - generate code without it
+                    });
+
+                    if (result.success) {
+                        return [{
+                            kind: 'text',
+                            to: message.from,
+                            body: `✅ Visitor code generated for ${visitorName}!\n\nCode: *${result.code}*\n\nShare this code with them for entry.`,
+                        }];
+                    } else {
+                        return [{
+                            kind: 'text',
+                            to: message.from,
+                            body: `Sorry, I couldn't generate the code. ${result.message}`,
+                        }];
+                    }
                 }
 
                 // Handle visitor code confirmation - NO
