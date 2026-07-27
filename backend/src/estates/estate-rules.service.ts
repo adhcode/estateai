@@ -168,7 +168,7 @@ export class EstateRulesService {
                     title: 'Pet Policy',
                     rule: 'Pets are not allowed in the estate',
                     keywords: ['pet', 'pets', 'dog', 'cat', 'animal', 'animals'],
-                    answer: 'Pets are not allowed in the estate. This policy helps maintain cleanliness and ensures the comfort of all residents.',
+                    answer: 'Pets are not allowed in the estate. This policy helps maintain cleanliness and ensures the comfort of all residents.'
                 },
             ],
         };
