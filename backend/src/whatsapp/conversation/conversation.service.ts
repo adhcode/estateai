@@ -322,7 +322,10 @@ export class ConversationService {
                 this.logger.log(`Message text: "${message.text}"`);
                 this.logger.log(`Message type: ${message.type}`);
 
-                const response = (message.text || '').toLowerCase().trim();
+                const response = (message.text || '')
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[.,!?;:]/g, ''); // Remove common punctuation
                 const visitorName = context.data.pendingVisitorName;
 
                 this.logger.log(`Processed response: "${response}"`);
