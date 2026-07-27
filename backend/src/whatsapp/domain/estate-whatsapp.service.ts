@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { EstateRulesService } from '../../estates/estate-rules.service';
 import { OccupantsService } from '../../occupants/occupants.service';
 import { ResidentIdCardService } from '../../resident-id/resident-id-card.service';
 import { ResidentPhotoService } from '../../resident-id/resident-photo.service';
@@ -31,6 +32,7 @@ export class EstateWhatsAppService {
         private readonly residentIdCardService: ResidentIdCardService,
         @Inject(forwardRef(() => ResidentPhotoService))
         private readonly residentPhotoService: ResidentPhotoService,
+        private readonly estateRulesService: EstateRulesService,
     ) { }
 
     /**
@@ -71,6 +73,13 @@ export class EstateWhatsAppService {
             });
 
             this.logger.log(`Visitor code generated: ${visitorCode.code} for ${visitorCode.visitorName}`);
+            this.logger.log(`📅 Debug expiresAt from database:`);
+            this.logger.log(`  - Type: ${typeof visitorCode.expiresAt}`);
+            this.logger.log(`  - Value: ${visitorCode.expiresAt}`);
+            this.logger.log(`  - ISO: ${new Date(visitorCode.expiresAt).toISOString()}`);
+            this.logger.log(`  - Locale: ${new Date(visitorCode.expiresAt).toLocaleString()}`);
+            this.logger.log(`  - Now: ${new Date().toLocaleString()}`);
+            this.logger.log(`  - Difference in hours: ${(new Date(visitorCode.expiresAt).getTime() - Date.now()) / (60 * 60 * 1000)}`);
 
             // Generate beautiful visitor card with QR code
             let cardUrl: string | null = null;
@@ -88,10 +97,17 @@ export class EstateWhatsAppService {
             }
 
             // Send to occupant with beautiful card (or text-only if upload failed)
+            const expiryTime = new Date(visitorCode.expiresAt);
+            this.logger.log(`📱 Preparing message for occupant:`);
+            this.logger.log(`  - Expiry from visitorCode: ${visitorCode.expiresAt}`);
+            this.logger.log(`  - Expiry as Date object: ${expiryTime}`);
+            this.logger.log(`  - Expiry (ISO): ${expiryTime.toISOString()}`);
+            this.logger.log(`  - Expiry (Locale): ${expiryTime.toLocaleString()}`);
+
             const occupantMessage =
                 `Access created for ${params.visitorName}\n\n` +
                 `Code: *${visitorCode.code}*\n` +
-                `Valid until: ${new Date(visitorCode.expiresAt).toLocaleString()}\n\n` +
+                `Valid until: ${expiryTime.toLocaleString()}\n\n` +
                 (cardUrl ? `Access card attached below.` : `Show this code at the gate for entry.`);
 
             await this.messengerService.sendText({
@@ -116,12 +132,16 @@ export class EstateWhatsAppService {
 
             // Send to visitor if phone provided
             if (params.visitorPhone) {
+                const visitorExpiryTime = new Date(visitorCode.expiresAt);
+                this.logger.log(`📱 Preparing message for visitor:`);
+                this.logger.log(`  - Expiry (Locale): ${visitorExpiryTime.toLocaleString()}`);
+
                 const visitorMessage =
                     `*${occupant.estate?.name || 'Estate'}* - Visitor Access\n\n` +
                     `Hello ${params.visitorName},\n\n` +
                     `Your Access Code: *${visitorCode.code}*\n` +
                     `Unit: ${occupant.unit?.block} ${occupant.unit?.flat}\n` +
-                    `Valid Until: ${new Date(visitorCode.expiresAt).toLocaleString()}\n\n` +
+                    `Valid Until: ${visitorExpiryTime.toLocaleString()}\n\n` +
                     `Address: ${occupant.estate?.address || 'Estate Address'}\n\n` +
                     `Please show this ${cardUrl ? 'card or access' : 'access'} code at the gate for entry.`;
 
@@ -813,4 +833,70 @@ export class EstateWhatsAppService {
         return `RES-${occupantId.substring(0, 8).toUpperCase()}`;
     }
 
+    /**
+     * Query estate rules and regulations
+     */
+    async queryEstateRules(params: {
+        occupantPhone: string;
+        query: string;
+    }): Promise<{ success: boolean; answer?: string; message: string }> {
+        try {
+            this.logger.log(`Querying estate rules for: ${params.occupantPhone} - "${params.query}"`);
+
+            // Find occupant to get estate ID
+            const occupant = await this.findOccupantByPhone(params.occupantPhone);
+
+            if (!occupant) {
+                return {
+                    success: false,
+                    message: 'Occupant not found',
+                };
+            }
+
+            // Search for matching rules
+            const { bestMatch } = await this.estateRulesService.findMatchingRules(
+                occupant.estateId,
+                params.query,
+            );
+
+            if (bestMatch) {
+                this.logger.log(`Found matching rule: ${bestMatch.title}`);
+
+                await this.messengerService.sendText({
+                    to: params.occupantPhone,
+                    body: `*${bestMatch.title}*\n\n${bestMatch.answer}`,
+                });
+
+                return {
+                    success: true,
+                    answer: bestMatch.answer,
+                    message: 'Rule found and sent',
+                };
+            } else {
+                this.logger.log(`No matching rule found for query: ${params.query}"`);
+
+                await this.messengerService.sendText({
+                    to: params.occupantPhone,
+                    body: `I couldn't find a specific rule about that. Please contact estate management for more information, or try asking your question differently.`,
+                });
+
+                return {
+                    success: false,
+                    message: 'No matching rule found',
+                };
+            }
+        } catch (error: any) {
+            this.logger.error(`Error querying estate rules: ${error.message}`);
+
+            await this.messengerService.sendText({
+                to: params.occupantPhone,
+                body: `Sorry, there was an error looking up that information. Please try again.`,
+            });
+
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+    }
 }

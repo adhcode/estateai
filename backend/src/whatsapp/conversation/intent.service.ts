@@ -442,6 +442,19 @@ export class IntentService {
             };
         }
 
+        // Estate rules query
+        if (/(rule|rules|regulation|regulations|policy|policies|allowed|allow|can i|am i allowed)/i.test(lowerText)) {
+            return {
+                name: 'query_estate_rules',
+                displayName: 'Query Estate Rules',
+                confidence: 0.9,
+                parameters: {
+                    query: lowerText,
+                },
+                isFallback: false,
+            };
+        }
+
         // Help
         if (/help|what can|how do|commands|options/i.test(lowerText)) {
             return {

@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MessengerService } from '../whatsapp/outbound/messenger.service';
 import { GenerateVisitorCodeDto } from './dto/generate-visitor-code.dto';
@@ -8,6 +8,8 @@ import { generateCode } from './utils/generate-code';
 
 @Injectable()
 export class VisitorCodeService {
+  private readonly logger = new Logger(VisitorCodeService.name);
+
   constructor(
     private prisma: PrismaService,
     private qrCodeService: QrCodeService,
@@ -40,9 +42,21 @@ export class VisitorCodeService {
     const unitId = occupant.unitId;
 
     // Calculate expiration time
+    const now = new Date();
     const expiration = expiresAt
       ? new Date(expiresAt)
       : new Date(Date.now() + validHours * 60 * 60 * 1000);
+
+    // Log for debugging
+    this.logger.log(`⏰ Code expiration calculated:`);
+    this.logger.log(`  - Now (ISO): ${now.toISOString()}`);
+    this.logger.log(`  - Now (Locale): ${now.toLocaleString()}`);
+    this.logger.log(`  - Valid hours: ${validHours}`);
+    this.logger.log(`  - Calculation: ${Date.now()} + (${validHours} * 60 * 60 * 1000) = ${Date.now() + validHours * 60 * 60 * 1000}`);
+    this.logger.log(`  - Expires at (ISO): ${expiration.toISOString()}`);
+    this.logger.log(`  - Expires at (Locale): ${expiration.toLocaleString()}`);
+    this.logger.log(`  - Difference in ms: ${expiration.getTime() - now.getTime()}`);
+    this.logger.log(`  - Difference in hours: ${(expiration.getTime() - now.getTime()) / (60 * 60 * 1000)}`);
 
     // Generate unique code
     let code: string;

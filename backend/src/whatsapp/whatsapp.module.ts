@@ -25,6 +25,7 @@ import { StateStore } from './conversation/state.store';
 import { EstateWhatsAppService } from './domain/estate-whatsapp.service';
 
 // Domain imports
+import { EstatesModule } from '../estates/estates.module';
 import { OccupantsModule } from '../occupants/occupants.module';
 import { ResidentIdModule } from '../resident-id/resident-id.module';
 import { VisitorCodeModule } from '../visitor-code/visitor-code.module';
@@ -38,6 +39,7 @@ import { VisitorCodeModule } from '../visitor-code/visitor-code.module';
         forwardRef(() => VisitorCodeModule),
         forwardRef(() => OccupantsModule),
         forwardRef(() => ResidentIdModule),
+        EstatesModule,
     ],
     controllers: [
         WebhookController,

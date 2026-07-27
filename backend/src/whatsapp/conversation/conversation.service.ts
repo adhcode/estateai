@@ -672,6 +672,10 @@ export class ConversationService {
                 await this.handleUpdatePhoto(message.from, responses);
                 break;
 
+            case 'query estate rules':
+                await this.handleEstateRulesQuery(intent, message.from, responses);
+                break;
+
             case 'fallback':
                 this.getFallbackWithButtons(message.from, responses);
                 break;
@@ -2411,5 +2415,78 @@ export class ConversationService {
         }
 
         return responses;
+    }
+
+    /**
+     * Handle estate rules query
+     */
+    private async handleEstateRulesQuery(
+        intent: DetectedIntent,
+        phoneNumber: string,
+        responses: OutgoingMessage[],
+    ): Promise<void> {
+        try {
+            const query = intent.parameters?.query || '';
+
+            if (!query) {
+                responses.push({
+                    kind: 'text',
+                    to: phoneNumber,
+                    body: 'What would you like to know about the estate rules?',
+                });
+                return;
+            }
+
+            await this.showTypingIndicator(phoneNumber);
+
+            this.logger.log(`Querying estate rules for ${phoneNumber}: "${query}"`);
+
+            // Call domain service to query rules
+            const result = await this.estateWhatsAppService.queryEstateRules({
+                occupantPhone: phoneNumber,
+                query: query,
+            });
+
+            // Note: The domain service already sends the answer via messenger
+            // We just need to add follow-up buttons
+
+            if (result.success) {
+                responses.push({
+                    kind: 'interactive',
+                    to: phoneNumber,
+                    interactive: {
+                        type: 'button',
+                        body: {
+                            text: 'Do you have any other questions?',
+                        },
+                        action: {
+                            buttons: [
+                                {
+                                    type: 'reply',
+                                    reply: {
+                                        id: 'generate_code',
+                                        title: 'Visitor Code',
+                                    },
+                                },
+                                {
+                                    type: 'reply',
+                                    reply: {
+                                        id: 'help',
+                                        title: 'Menu',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                });
+            }
+        } catch (error) {
+            this.logger.error(`Error handling estate rules query: ${error.message}`);
+            responses.push({
+                kind: 'text',
+                to: phoneNumber,
+                body: `Sorry, there was an error looking up that information. Please try again.`,
+            });
+        }
     }
 }
