@@ -155,6 +155,7 @@ export class VisitorCardService {
 
             const expiryDate = new Date(visitorCodeData.expiresAt);
             const expiryText = expiryDate.toLocaleString('en-US', {
+                timeZone: 'Africa/Lagos',
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',

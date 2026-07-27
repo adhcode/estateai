@@ -357,22 +357,12 @@ export class ConversationService {
                     const result = await this.estateWhatsAppService.generateAndSendVisitorCode({
                         occupantPhone: message.from,
                         visitorName: visitorName,
-                        // No visitorPhone - generate code without it
+                        validHours: 1,
                     });
 
-                    if (result.success) {
-                        return [{
-                            kind: 'text',
-                            to: message.from,
-                            body: `✅ Visitor code generated for ${visitorName}!\n\nCode: *${result.code}*\n\nShare this code with them for entry.`,
-                        }];
-                    } else {
-                        return [{
-                            kind: 'text',
-                            to: message.from,
-                            body: `Sorry, I couldn't generate the code. ${result.message}`,
-                        }];
-                    }
+                    // Don't send any message - the card is already sent by generateAndSendVisitorCode
+                    // Just return empty array since card was already sent
+                    return [];
                 }
 
                 // Check for no/negative response
@@ -613,67 +603,6 @@ export class ConversationService {
                 if (buttonId === 'get_resident_id') {
                     this.logger.log(`User clicked get resident ID button`);
                     return await this.handleGetResidentId(message.from, []);
-                }
-
-                // Handle visitor code confirmation - YES
-                if (buttonId === 'confirm_visitor_yes') {
-                    this.logger.log(`User confirmed visitor code generation`);
-                    const visitorName = context.data.pendingVisitorName;
-
-                    if (!visitorName) {
-                        return [{
-                            kind: 'text',
-                            to: message.from,
-                            body: `Sorry, I lost track of the visitor name. Please try again.`,
-                        }];
-                    }
-
-                    // Clear state and generate code immediately (no phone number needed)
-                    context.state = 'idle';
-                    delete context.data.pendingVisitorName;
-                    delete context.data.visitorAtGateTimestamp;
-                    await this.stateStore.saveContext(context);
-
-                    // Show typing indicator
-                    await this.showTypingIndicator(message.from);
-
-                    // Generate visitor code without phone number
-                    const result = await this.estateWhatsAppService.generateAndSendVisitorCode({
-                        occupantPhone: message.from,
-                        visitorName: visitorName,
-                        // No visitorPhone - generate code without it
-                    });
-
-                    if (result.success) {
-                        return [{
-                            kind: 'text',
-                            to: message.from,
-                            body: `✅ Visitor code generated for ${visitorName}!\n\nCode: *${result.code}*\n\nShare this code with them for entry.`,
-                        }];
-                    } else {
-                        return [{
-                            kind: 'text',
-                            to: message.from,
-                            body: `Sorry, I couldn't generate the code. ${result.message}`,
-                        }];
-                    }
-                }
-
-                // Handle visitor code confirmation - NO
-                if (buttonId === 'confirm_visitor_no') {
-                    this.logger.log(`User declined visitor code generation`);
-
-                    // Clear state
-                    context.state = 'idle';
-                    delete context.data.pendingVisitorName;
-                    delete context.data.visitorAtGateTimestamp;
-                    await this.stateStore.saveContext(context);
-
-                    return [{
-                        kind: 'text',
-                        to: message.from,
-                        body: `Okay, no problem! Let me know if you need anything else.`,
-                    }];
                 }
 
                 messageText = this.mapButtonToCommand(buttonId);
@@ -1138,34 +1067,11 @@ export class ConversationService {
             context.data.visitorAtGateTimestamp = new Date().toISOString();
             await this.stateStore.saveContext(context);
 
-            // Ask for confirmation with Yes/No buttons
+            // Ask for confirmation - text only, no buttons
             responses.push({
-                kind: 'interactive',
+                kind: 'text',
                 to: phoneNumber,
-                interactive: {
-                    type: 'button',
-                    body: {
-                        text: `Got it! Do you want to generate a visitor code for ${visitorName}?`,
-                    },
-                    action: {
-                        buttons: [
-                            {
-                                type: 'reply',
-                                reply: {
-                                    id: 'confirm_visitor_yes',
-                                    title: 'Yes ✓',
-                                },
-                            },
-                            {
-                                type: 'reply',
-                                reply: {
-                                    id: 'confirm_visitor_no',
-                                    title: 'No',
-                                },
-                            },
-                        ],
-                    },
-                },
+                body: `Got it! Do you want to generate a visitor code for ${visitorName}?`,
             });
 
         } catch (error) {
